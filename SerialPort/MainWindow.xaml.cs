@@ -15,7 +15,7 @@ namespace MySerialPort
         SerialPort serialPort;
         private static readonly byte NEW_LINE = 10;
         private static readonly int BAUD_RATE = 38400; //4.69KBit/s
-        private static readonly int MAX_DATA_PACKET_LENGTH = 250;
+        private static readonly byte MAX_DATA_PACKET_LENGTH = 250;
 
         private static readonly byte READ_COMMAND = 0xAA;
         private static readonly byte WRITE_COMMAND = 0xDD;
@@ -27,13 +27,16 @@ namespace MySerialPort
         private readonly byte memoryToUse = EEPROM_MEMORY;
 
         private readonly byte INTENTION_COMMAND = 0x00;
-        private readonly byte END_OF_TRANSMISSION = 0x60;
-        private readonly int DATA_START_INDEX = 9;
-        private readonly int DATA_LENGTH = 10;
-        private readonly int HEADER_LENGTH = 8;
+        private static readonly byte HEADER_LENGTH = 9;
+        private static readonly byte CHECKSUM_LENGTH = 4;
+        private static readonly byte DATA_START_INDEX = 10;
+        private static readonly byte LOW_ADDR_START_INDEX = 4;
+        private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
+        private static readonly byte DATA_LENGTH = 3;
         private readonly byte[] lowAddr = { 0x01, 0x00, 0x00, 0x00 }; //first byte is least significant. Note that I have to make it 4 bytes for the ToInt32 below to work.
         private byte[] data;
         private byte[] receivedBytes;
+        private Crc32 crc32 = new Crc32();
 
         public MainWindow()
         {
@@ -43,20 +46,6 @@ namespace MySerialPort
                 this.AvailableSerialPorts.Items.Add(s);
             }
             this.AvailableSerialPorts.SelectedIndex = this.AvailableSerialPorts.Items.Count - 1;
-            Random rnd = new Random();
-            byte[] bytes = new byte[DATA_LENGTH];
-            for (int i = 0; i < DATA_LENGTH; i++)
-            {
-                bytes[i] = (byte)rnd.Next(1, 256);  // 1 <= month < 0x60;
-            }
-            this.DataReceived.Text = BitConverter.ToString(bytes).Replace("-", ", 0x");
-            Crc32 crc32 = new Crc32();
-            String output = "";
-            foreach (byte b in crc32.ComputeHash(bytes))
-            {
-                output += b.ToString("x2").ToLower();
-            }
-            this.DataSent.Text = output;
         }
 
         //Event handler is triggered/run on a NON-UI thread
@@ -110,7 +99,7 @@ namespace MySerialPort
             data = new byte[DATA_LENGTH];
             for (int i = 0; i < DATA_LENGTH; i++)
             {
-                data[i] = (byte)rnd.Next(1, END_OF_TRANSMISSION);  // 1 <= month < 0x60;
+                data[i] = (byte)rnd.Next(1, 256);  // 1 <= month < 256;
             }
             byte[] dataSentBytes = prepareDataToSend(data);
             this.DataSent.Text = BitConverter.ToString(dataSentBytes);
@@ -124,77 +113,76 @@ namespace MySerialPort
             serialPort.Write(dataReadBytes, 0, dataReadBytes.Length);
         }
 
+        private byte getDataPacketLength(int dataLength)
+        {
+            int dataPacketLengthInt = HEADER_LENGTH + dataLength + CHECKSUM_LENGTH + 1;
+            if (dataPacketLengthInt > MAX_DATA_PACKET_LENGTH)
+            {
+                throw new Exception(String.Format("dataPacketLength {0} > MAX_DATA_PACKET_LENGTH {1}!", dataPacketLengthInt, MAX_DATA_PACKET_LENGTH));
+            }
+            byte dataPacketLength = (byte)(dataPacketLengthInt);
+            return dataPacketLength;
+        }
+
         private byte[] prepareDataToSend(byte[] data)
         {
-            byte[] checksumCRC32 = { 0x0A, 0x0B, 0x0C, 0x0D };
-            int dataPacketLength = HEADER_LENGTH + data.Length + checksumCRC32.Length + 2;
-
-            if (dataPacketLength > MAX_DATA_PACKET_LENGTH)
-            {
-                throw new Exception(String.Format("dataPacketLength {0} > MAX_DATA_PACKET_LENGTH {1}!", dataPacketLength, MAX_DATA_PACKET_LENGTH));
-            }
-
+            byte dataPacketLength = getDataPacketLength(data.Length);
             byte[] dataSentBytes = new byte[dataPacketLength];
-            dataSentBytes[0] = WRITE_COMMAND;
-            dataSentBytes[1] = memoryToUse;
-            dataSentBytes[2] = INTENTION_COMMAND;
+            dataSentBytes[0] = dataPacketLength;
+            dataSentBytes[1] = WRITE_COMMAND;
+            dataSentBytes[2] = memoryToUse;
+            dataSentBytes[3] = INTENTION_COMMAND;
 
-            dataSentBytes[3] = lowAddr[0];
-            dataSentBytes[4] = lowAddr[1];
-            dataSentBytes[5] = lowAddr[2];
+            dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
+            dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
+            dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
             int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length - 1;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
-            dataSentBytes[6] = hiAddrBytes[0];
-            dataSentBytes[7] = hiAddrBytes[1];
-            dataSentBytes[8] = hiAddrBytes[2];
+            dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
+            dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
+            dataSentBytes[HI_ADDR_START_INDEX + 2] = hiAddrBytes[2];
 
             for (int i = DATA_START_INDEX; i < DATA_START_INDEX + data.Length; i++)
             {
                 dataSentBytes[i] = data[i - DATA_START_INDEX];
             }
             int iStartCRC = DATA_START_INDEX + data.Length;
-            for (int i = iStartCRC; i < iStartCRC + checksumCRC32.Length; i++)
+            byte[] checksumCRC32 = crc32.ComputeHash(dataSentBytes, 0, iStartCRC);
+            for (int i = iStartCRC; i < iStartCRC + CHECKSUM_LENGTH; i++)
             {
                 dataSentBytes[i] = checksumCRC32[i - iStartCRC];
             }
-            dataSentBytes[DATA_START_INDEX + data.Length + checksumCRC32.Length] = END_OF_TRANSMISSION;
             return dataSentBytes;
         }
 
         private byte[] prepareDataToRead(int dataLength)
         {
-            byte[] checksumCRC32 = { 0x0A, 0x0B, 0x0C, 0x0D };
-            int dataPacketLength = HEADER_LENGTH + 0 + checksumCRC32.Length + 2;
-
-            if (dataPacketLength > MAX_DATA_PACKET_LENGTH)
-            {
-                throw new Exception(String.Format("dataPacketLength {0} > MAX_DATA_PACKET_LENGTH {1}!", dataPacketLength, MAX_DATA_PACKET_LENGTH));
-            }
-
+            byte dataPacketLength = getDataPacketLength(0);
             byte[] dataSentBytes = new byte[dataPacketLength];
-            dataSentBytes[0] = READ_COMMAND;
-            dataSentBytes[1] = memoryToUse;
-            dataSentBytes[2] = INTENTION_COMMAND;
+            dataSentBytes[0] = dataPacketLength;
+            dataSentBytes[1] = READ_COMMAND;
+            dataSentBytes[2] = memoryToUse;
+            dataSentBytes[3] = INTENTION_COMMAND;
 
-            dataSentBytes[3] = lowAddr[0];
-            dataSentBytes[4] = lowAddr[1];
-            dataSentBytes[5] = lowAddr[2];
+            dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
+            dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
+            dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
             //Array.Reverse(lowAddr); //Convert to big endian
             int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
             //Array.Reverse(hiAddrBytes); //convert to little endian
-            dataSentBytes[6] = hiAddrBytes[0];
-            dataSentBytes[7] = hiAddrBytes[1];
-            dataSentBytes[8] = hiAddrBytes[2];
+            dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
+            dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
+            dataSentBytes[HI_ADDR_START_INDEX + 2] = hiAddrBytes[2];
 
-            int iStartCRC = DATA_START_INDEX;
-            for (int i = iStartCRC; i < iStartCRC + checksumCRC32.Length; i++)
+            int iStartCRC = DATA_START_INDEX; //no data is sent to card when reading from card
+            byte[] checksumCRC32 = crc32.ComputeHash(dataSentBytes, 0, DATA_START_INDEX);
+            for (int i = iStartCRC; i < iStartCRC + CHECKSUM_LENGTH; i++)
             {
                 dataSentBytes[i] = checksumCRC32[i - iStartCRC];
             }
-            dataSentBytes[DATA_START_INDEX + 0 + checksumCRC32.Length] = END_OF_TRANSMISSION;
             return dataSentBytes;
         }
 
