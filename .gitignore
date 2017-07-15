@@ -48,4 +48,7 @@ Temporary Items
 *.suo
 SerialPort/bin/
 SerialPort/obj/
-
+TestResults/
+packages/
+TestSerialPort/bin/
+TestSerialPort/obj/

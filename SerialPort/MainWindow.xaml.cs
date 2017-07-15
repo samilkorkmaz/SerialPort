@@ -29,7 +29,7 @@ namespace MySerialPort
         private readonly byte INTENTION_COMMAND = 0x00;
         private readonly byte END_OF_TRANSMISSION = 0x60;
         private readonly int DATA_START_INDEX = 9;
-        private readonly int DATA_LENGTH = 5;
+        private readonly int DATA_LENGTH = 10;
         private readonly int HEADER_LENGTH = 8;
         private readonly byte[] lowAddr = { 0x01, 0x00, 0x00, 0x00 }; //first byte is least significant. Note that I have to make it 4 bytes for the ToInt32 below to work.
         private byte[] data;
@@ -43,6 +43,20 @@ namespace MySerialPort
                 this.AvailableSerialPorts.Items.Add(s);
             }
             this.AvailableSerialPorts.SelectedIndex = this.AvailableSerialPorts.Items.Count - 1;
+            Random rnd = new Random();
+            byte[] bytes = new byte[DATA_LENGTH];
+            for (int i = 0; i < DATA_LENGTH; i++)
+            {
+                bytes[i] = (byte)rnd.Next(1, 256);  // 1 <= month < 0x60;
+            }
+            this.DataReceived.Text = BitConverter.ToString(bytes).Replace("-", ", 0x");
+            Crc32 crc32 = new Crc32();
+            String output = "";
+            foreach (byte b in crc32.ComputeHash(bytes))
+            {
+                output += b.ToString("x2").ToLower();
+            }
+            this.DataSent.Text = output;
         }
 
         //Event handler is triggered/run on a NON-UI thread
