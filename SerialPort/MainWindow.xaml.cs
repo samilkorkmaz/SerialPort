@@ -25,7 +25,6 @@ namespace MySerialPort
         private static readonly byte EEPROM_MEMORY = 0x1B;
         private static readonly byte FLASH_MEMORY = 0x1C;
         private static readonly byte CPU_MEMORY = 0x1D;
-        private readonly byte memoryToUse = EEPROM_MEMORY;
 
         private static readonly byte HEX_BASE = 16;
 
@@ -37,6 +36,23 @@ namespace MySerialPort
         private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
         private byte[] receivedBytes;
         private Crc32 crc32 = new Crc32();
+
+        private byte getMemoryType()
+        {
+            switch (this.MemoryType.SelectedIndex)
+            {
+                case 0:
+                    return SD_CARD_MEMORY;
+                case 1:
+                    return EEPROM_MEMORY;
+                case 2:
+                    return FLASH_MEMORY;
+                case 3:
+                    return CPU_MEMORY;
+                default:
+                    throw new Exception(String.Format("Uknown selection " + this.MemoryType.SelectedItem.ToString()));
+            }
+        }
 
         public MainWindow()
         {
@@ -137,13 +153,13 @@ namespace MySerialPort
 
         private void sendWriteClick(object sender, RoutedEventArgs e)
         {
-            byte[] dataSentBytes = prepareDataToSend(System.Convert.ToInt32(this.StartAddr.Text), 
+            byte[] dataSentBytes = prepareDataToSend(System.Convert.ToInt32(this.StartAddr.Text),
                 parseData(this.DataToSend.Text));
             this.DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", " 0x");
             if (isSerialPortOk())
             {
                 serialPort.Write(dataSentBytes, 0, dataSentBytes.Length);
-            } 
+            }
         }
 
         private bool isSerialPortOk()
@@ -151,7 +167,8 @@ namespace MySerialPort
             if (serialPort == null)
             {
                 MessageBox.Show("serialPort == null");
-            } else if (!serialPort.IsOpen)
+            }
+            else if (!serialPort.IsOpen)
             {
                 MessageBox.Show("!serialPort.IsOpen");
             }
@@ -185,7 +202,7 @@ namespace MySerialPort
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
             dataSentBytes[1] = WRITE_COMMAND;
-            dataSentBytes[2] = memoryToUse;
+            dataSentBytes[2] = getMemoryType();
             dataSentBytes[3] = INTENTION_COMMAND;
 
             byte[] lowAddr = BitConverter.GetBytes(startAddr);
@@ -218,7 +235,7 @@ namespace MySerialPort
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
             dataSentBytes[1] = READ_COMMAND;
-            dataSentBytes[2] = memoryToUse;
+            dataSentBytes[2] = getMemoryType();
             dataSentBytes[3] = INTENTION_COMMAND;
 
             byte[] lowAddr = BitConverter.GetBytes(startAddr);
