@@ -1,2 +1,2 @@
 # SerialPort
-Serial port communication with C#
+Serial port communication with C# and WPF
