@@ -8,7 +8,8 @@ using System.Collections;
 namespace MySerialPort
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Communication with rail circuit card via serial port.
+    /// Protocol reference: https://docs.google.com/document/d/1Nx-vx0cXp-aIgKuCpmPjQVIvB5yWJyjRDjy-y_SSSkc
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -26,15 +27,14 @@ namespace MySerialPort
         private static readonly byte CPU_MEMORY = 0x1D;
         private readonly byte memoryToUse = EEPROM_MEMORY;
 
+        private static readonly byte HEX_BASE = 16;
+
         private readonly byte INTENTION_COMMAND = 0x00;
         private static readonly byte HEADER_LENGTH = 9;
         private static readonly byte CHECKSUM_LENGTH = 4;
         private static readonly byte DATA_START_INDEX = 10;
         private static readonly byte LOW_ADDR_START_INDEX = 4;
         private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
-        private static readonly byte DATA_LENGTH = 3;
-        private readonly byte[] lowAddr = { 0x01, 0x00, 0x00, 0x00 }; //first byte is least significant. Note that I have to make it 4 bytes for the ToInt32 below to work.
-        private byte[] data;
         private byte[] receivedBytes;
         private Crc32 crc32 = new Crc32();
 
@@ -46,6 +46,49 @@ namespace MySerialPort
                 this.AvailableSerialPorts.Items.Add(s);
             }
             this.AvailableSerialPorts.SelectedIndex = this.AvailableSerialPorts.Items.Count - 1;
+            generateData(3);
+        }
+
+        private String toHexString(byte[] bytes)
+        {
+            String s = "";
+            foreach (var b in bytes)
+            {
+                s = s + String.Format("0x{0}, ", System.Convert.ToString(b, HEX_BASE).ToUpper());
+            }
+            //remove last comma
+            s = s.Substring(0, s.Length - 2);
+            return s;
+        }
+
+        private void generateData(int dataLength)
+        {
+            Random rnd = new Random();
+            byte[] dataTemp = new byte[dataLength];
+            for (int i = 0; i < dataLength; i++)
+            {
+                dataTemp[i] = (byte)rnd.Next(1, 0xFF);  // 1 <= dataTemp[i] < 255;
+            }
+            this.DataToSend.Text = toHexString(dataTemp);
+        }
+
+        private byte[] parseData(String text)
+        {
+            String[] strings = text.Split(',');
+            byte[] bytes = new byte[strings.Length];
+            for (int i = 0; i < strings.Length; i++)
+            {
+                String s = strings[i];
+                if (!String.IsNullOrEmpty(s.Trim()))
+                {
+                    bytes[i] = System.Convert.ToByte(s.Trim().Substring(2, 2), HEX_BASE); //Remove "0x" part
+                }
+                else
+                {
+                    throw new Exception(String.Format("String is null or empty: {0}", s));
+                }
+            }
+            return bytes;
         }
 
         //Event handler is triggered/run on a NON-UI thread
@@ -94,23 +137,35 @@ namespace MySerialPort
 
         private void sendWriteClick(object sender, RoutedEventArgs e)
         {
-            Random rnd = new Random();
-            //protocol reference: https://docs.google.com/document/d/1Nx-vx0cXp-aIgKuCpmPjQVIvB5yWJyjRDjy-y_SSSkc
-            data = new byte[DATA_LENGTH];
-            for (int i = 0; i < DATA_LENGTH; i++)
+            byte[] dataSentBytes = prepareDataToSend(System.Convert.ToInt32(this.StartAddr.Text), 
+                parseData(this.DataToSend.Text));
+            this.DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", " 0x");
+            if (isSerialPortOk())
             {
-                data[i] = (byte)rnd.Next(1, 256);  // 1 <= month < 256;
+                serialPort.Write(dataSentBytes, 0, dataSentBytes.Length);
+            } 
+        }
+
+        private bool isSerialPortOk()
+        {
+            if (serialPort == null)
+            {
+                MessageBox.Show("serialPort == null");
+            } else if (!serialPort.IsOpen)
+            {
+                MessageBox.Show("!serialPort.IsOpen");
             }
-            byte[] dataSentBytes = prepareDataToSend(data);
-            this.DataSent.Text = BitConverter.ToString(dataSentBytes);
-            serialPort.Write(dataSentBytes, 0, dataSentBytes.Length);
+            return serialPort != null && serialPort.IsOpen;
         }
 
         private void sendReadClick(object sender, RoutedEventArgs e)
         {
-            byte[] dataReadBytes = prepareDataToRead(DATA_LENGTH);
-            this.DataSent.Text = BitConverter.ToString(dataReadBytes);
-            serialPort.Write(dataReadBytes, 0, dataReadBytes.Length);
+            byte[] dataReadBytes = prepareDataToRead(System.Convert.ToInt32(this.StartAddr.Text), System.Convert.ToInt32(this.DataLength.Text));
+            this.DataSent.Text = "0x" + BitConverter.ToString(dataReadBytes).Replace("-", ", 0x");
+            if (isSerialPortOk())
+            {
+                serialPort.Write(dataReadBytes, 0, dataReadBytes.Length);
+            }
         }
 
         private byte getDataPacketLength(int dataLength)
@@ -124,7 +179,7 @@ namespace MySerialPort
             return dataPacketLength;
         }
 
-        private byte[] prepareDataToSend(byte[] data)
+        private byte[] prepareDataToSend(int startAddr, byte[] data)
         {
             byte dataPacketLength = getDataPacketLength(data.Length);
             byte[] dataSentBytes = new byte[dataPacketLength];
@@ -133,6 +188,7 @@ namespace MySerialPort
             dataSentBytes[2] = memoryToUse;
             dataSentBytes[3] = INTENTION_COMMAND;
 
+            byte[] lowAddr = BitConverter.GetBytes(startAddr);
             dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
@@ -156,7 +212,7 @@ namespace MySerialPort
             return dataSentBytes;
         }
 
-        private byte[] prepareDataToRead(int dataLength)
+        private byte[] prepareDataToRead(int startAddr, int dataLength)
         {
             byte dataPacketLength = getDataPacketLength(0);
             byte[] dataSentBytes = new byte[dataPacketLength];
@@ -165,14 +221,13 @@ namespace MySerialPort
             dataSentBytes[2] = memoryToUse;
             dataSentBytes[3] = INTENTION_COMMAND;
 
+            byte[] lowAddr = BitConverter.GetBytes(startAddr);
             dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
-            //Array.Reverse(lowAddr); //Convert to big endian
             int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
-            //Array.Reverse(hiAddrBytes); //convert to little endian
             dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
             dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
             dataSentBytes[HI_ADDR_START_INDEX + 2] = hiAddrBytes[2];
