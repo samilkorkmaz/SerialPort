@@ -28,7 +28,7 @@ namespace MySerialPort
 
         private static readonly byte HEX_BASE = 16;
 
-        private readonly byte INTENTION_COMMAND = 0x00;
+        private readonly byte INTENTION_COMMAND = 0x00; //TODO
         private static readonly byte HEADER_LENGTH = 9;
         private static readonly byte CHECKSUM_LENGTH = 4;
         private static readonly byte DATA_START_INDEX = 10;
@@ -36,6 +36,10 @@ namespace MySerialPort
         private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
         private byte[] receivedBytes;
         private Crc32 crc32 = new Crc32();
+        private byte expectedReceivedDataLength;
+        private bool transmissionJustStarted;
+        private int totalBytesReceived;
+        private static readonly string END_OF_RECEIVED_CARD_DATA = "END OF RECEIVED CARD DATA";
 
         private byte getMemoryType()
         {
@@ -113,8 +117,20 @@ namespace MySerialPort
             // All the incoming data in the port's buffer
             string dataReceived = serialPort.ReadExisting();
             receivedBytes = Encoding.ASCII.GetBytes(dataReceived);
+            if (transmissionJustStarted)
+            {
+                expectedReceivedDataLength = receivedBytes[0];
+                transmissionJustStarted = false;
+            }
+            totalBytesReceived += receivedBytes.Length;
+            String endStr = "";
+            if (totalBytesReceived == expectedReceivedDataLength)
+            {
+                endStr = END_OF_RECEIVED_CARD_DATA;
+            }
             //Update UI:
-            Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteData), BitConverter.ToString(receivedBytes));
+            Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteData), 
+                BitConverter.ToString(receivedBytes) + endStr);
         }
 
         private delegate void UpdateUiTextDelegate(string text);
@@ -146,7 +162,7 @@ namespace MySerialPort
         {
             this.Connect.IsEnabled = !isEnabled;
             this.SendWrite.IsEnabled = isEnabled;
-            this.Close.IsEnabled = isEnabled;
+            this.CloseSerialPort.IsEnabled = isEnabled;
             this.DataReceived.Text = "";
             this.DataSent.Text = "";
         }
@@ -155,9 +171,10 @@ namespace MySerialPort
         {
             byte[] dataSentBytes = prepareDataToSend(System.Convert.ToInt32(this.StartAddr.Text),
                 parseData(this.DataToSend.Text));
-            this.DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", " 0x");
+            this.DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", ", 0x");
             if (isSerialPortOk())
             {
+                reset();
                 serialPort.Write(dataSentBytes, 0, dataSentBytes.Length);
             }
         }
@@ -177,12 +194,20 @@ namespace MySerialPort
 
         private void sendReadClick(object sender, RoutedEventArgs e)
         {
-            byte[] dataReadBytes = prepareDataToRead(System.Convert.ToInt32(this.StartAddr.Text), System.Convert.ToInt32(this.DataLength.Text));
+            byte[] dataReadBytes = prepareDataToRead(System.Convert.ToInt32(this.StartAddr.Text), 
+                System.Convert.ToInt32(this.DataLength.Text));
             this.DataSent.Text = "0x" + BitConverter.ToString(dataReadBytes).Replace("-", ", 0x");
             if (isSerialPortOk())
             {
+                reset();
                 serialPort.Write(dataReadBytes, 0, dataReadBytes.Length);
             }
+        }
+
+        private void reset()
+        {
+            transmissionJustStarted = true;
+            totalBytesReceived = 0;
         }
 
         private byte getDataPacketLength(int dataLength)
@@ -258,7 +283,7 @@ namespace MySerialPort
             return dataSentBytes;
         }
 
-        private void closeClick(object sender, RoutedEventArgs e)
+        private void closeSerialPortClick(object sender, RoutedEventArgs e)
         {
             serialPort.Close();
             connectionEnabled(false);
@@ -274,10 +299,16 @@ namespace MySerialPort
         private void Convert_Click(object sender, RoutedEventArgs e)
         {
             String dataStr = this.DataReceived.Text;
-            byte[] dataBytes = Encoding.ASCII.GetBytes(dataStr);
+            int iEnd = dataStr.IndexOf(END_OF_RECEIVED_CARD_DATA);
+            if (iEnd >= 0)
+            {
+                dataStr = dataStr.Substring(0, dataStr.Length - END_OF_RECEIVED_CARD_DATA.Length);
+            }
+            //byte[] dataBytes = Encoding.ASCII.GetBytes(dataStr);
+            byte[] dataBytes = parseData(dataStr);
             BitArray bits = new BitArray(dataBytes);
             //BitArray bits = new BitArray(new byte[1] { 1 });
-            this.convertedData.Text = "";
+            this.ConvertedData.Text = "";
             int iByte = 0;
             String bitStr = "";
             for (int counter = 0; counter < bits.Length; counter++)
@@ -286,21 +317,21 @@ namespace MySerialPort
                 {
                     if (dataBytes[iByte] == NEW_LINE)
                     {
-                        this.convertedData.Text = this.convertedData.Text + "\\n" + ": " + dataBytes[iByte].ToString() + ": ";
+                        this.ConvertedData.Text = this.ConvertedData.Text + "\\n" + ": " + dataBytes[iByte].ToString() + ": ";
                         iByte++;
                     }
                     else
                     {
-                        this.convertedData.Text = this.convertedData.Text + dataStr.Substring(iByte, 1) + ": " + dataBytes[iByte].ToString() + ": ";
+                        this.ConvertedData.Text = this.ConvertedData.Text + System.Convert.ToString(dataBytes[iByte], HEX_BASE).ToUpper() + ": ";
                         iByte++;
                     }
                 }
                 bitStr = bitStr + (bits[counter] ? "1" : "0");
                 if ((counter + 1) % 8 == 0) //plot each byte on a separate line
                 {
-                    this.convertedData.Text = this.convertedData.Text + Reverse(bitStr); //Reverse bitStr to put low order bits to the left of string
+                    this.ConvertedData.Text = this.ConvertedData.Text + Reverse(bitStr); //Reverse bitStr to put low order bits to the left of string
                     bitStr = "";
-                    this.convertedData.Text = this.convertedData.Text + "\n";
+                    this.ConvertedData.Text = this.ConvertedData.Text + "\n";
                 }
             }
         }
