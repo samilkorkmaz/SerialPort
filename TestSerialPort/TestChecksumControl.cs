@@ -28,7 +28,7 @@ namespace TestSerialPort
         {
             List<byte[]> receivedList = new List<byte[]>();
             receivedList.Add(new byte[] { 0xE9, 0x5C, 0xA8, 0xEE, 0xFF, 0x8D, 0xFA, 0xD9, 0xC4, 0xEA });
-            byte[] checksum = { 0xBF, 0x54, 0xE3, 0x63 };
+            byte[] checksum = { 0xBF, 0x54, 0xE3, 0x6 };
             receivedList.Add(checksum);
             bool isOK = MySerialPort.ChecksumControl.isChecksumOk(receivedList, crc32, 4);
             String str = String.Format("Received = {0}, Expected = {1}",
