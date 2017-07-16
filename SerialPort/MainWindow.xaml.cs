@@ -180,9 +180,9 @@ namespace MySerialPort
             byte[] dataSentBytes = prepareDataToSend(System.Convert.ToInt32(StartAddr.Text),
                 parseData(DataToSend.Text));
             DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", ", 0x");
-            reset();
             if (isSerialPortOk())
             {
+                reset();
                 serialPort.Write(dataSentBytes, 0, dataSentBytes.Length);
             }
         }
