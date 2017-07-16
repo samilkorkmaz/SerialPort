@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace MySerialPort
 {
-    abc
     public class ChecksumControl
     {
         private static byte[] expected;
