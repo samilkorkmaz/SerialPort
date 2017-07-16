@@ -52,3 +52,5 @@ TestResults/
 packages/
 TestSerialPort/bin/
 TestSerialPort/obj/
+*.sqlite
+.vs/VSWorkspaceState.json

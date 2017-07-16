@@ -4,6 +4,8 @@ using System.Windows;
 using System.IO.Ports;
 using System.Windows.Threading;
 using System.Collections;
+using System.Threading;
+using System.Collections.Generic;
 
 namespace MySerialPort
 {
@@ -26,7 +28,7 @@ namespace MySerialPort
         private static readonly byte FLASH_MEMORY = 0x1C;
         private static readonly byte CPU_MEMORY = 0x1D;
 
-        private static readonly byte HEX_BASE = 16;
+        public static readonly byte HEX_BASE = 16;
 
         private readonly byte INTENTION_COMMAND = 0x00; //TODO
         private static readonly byte HEADER_LENGTH = 9;
@@ -40,6 +42,10 @@ namespace MySerialPort
         private bool transmissionJustStarted;
         private int totalBytesReceived;
         private static readonly string END_OF_RECEIVED_CARD_DATA = "END OF RECEIVED CARD DATA";
+        private bool isTranmissionEnded;
+        private static readonly int TIMEOUT_LIMIT_MS = 2 * 1000;
+        private static readonly int TIMEOUT_CHECK_INTERVAL_MS = 100;
+        private List<byte[]> receivedBytesList;
 
         private byte getMemoryType()
         {
@@ -117,6 +123,7 @@ namespace MySerialPort
             // All the incoming data in the port's buffer
             string dataReceived = serialPort.ReadExisting();
             receivedBytes = Encoding.ASCII.GetBytes(dataReceived);
+            receivedBytesList.Add(receivedBytes);
             if (transmissionJustStarted)
             {
                 expectedReceivedDataLength = receivedBytes[0];
@@ -127,9 +134,10 @@ namespace MySerialPort
             if (totalBytesReceived == expectedReceivedDataLength)
             {
                 endStr = END_OF_RECEIVED_CARD_DATA;
+                isTranmissionEnded = true;
             }
             //Update UI:
-            Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteData), 
+            Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteData),
                 BitConverter.ToString(receivedBytes) + endStr);
         }
 
@@ -194,7 +202,7 @@ namespace MySerialPort
 
         private void sendReadClick(object sender, RoutedEventArgs e)
         {
-            byte[] dataReadBytes = prepareDataToRead(System.Convert.ToInt32(this.StartAddr.Text), 
+            byte[] dataReadBytes = prepareDataToRead(System.Convert.ToInt32(this.StartAddr.Text),
                 System.Convert.ToInt32(this.DataLength.Text));
             this.DataSent.Text = "0x" + BitConverter.ToString(dataReadBytes).Replace("-", ", 0x");
             if (isSerialPortOk())
@@ -208,6 +216,38 @@ namespace MySerialPort
         {
             transmissionJustStarted = true;
             totalBytesReceived = 0;
+            isTranmissionEnded = false;
+            receivedBytesList = new List<Byte[]>();
+            Thread t = new Thread(checkTimeout);
+            t.Start();
+        }
+
+        private void checkTimeout()
+        {
+            int t_ms = 0;
+            while (t_ms <= TIMEOUT_LIMIT_MS)
+            {
+                if (isTranmissionEnded)
+                {
+                    break;
+                }
+                Thread.Sleep(TIMEOUT_CHECK_INTERVAL_MS);
+                t_ms += TIMEOUT_CHECK_INTERVAL_MS;
+            }
+            if (t_ms > TIMEOUT_LIMIT_MS)
+            {
+                MessageBox.Show(String.Format("Timeout limit {0} reached before transmission could end.", TIMEOUT_LIMIT_MS));
+            }
+            else
+            {
+                MessageBox.Show(String.Format("Transmission ended at t = {0} ms.", t_ms));
+                if (!ChecksumControl.isChecksumOk(receivedBytesList, crc32, CHECKSUM_LENGTH))
+                {
+                    MessageBox.Show(String.Format("Received crc32 byte {0} not as expected {1}!",
+                        ChecksumControl.getByteArrayAsString(ChecksumControl.Received),
+                        ChecksumControl.getByteArrayAsString(ChecksumControl.Expected)));
+                }
+            }
         }
 
         private byte getDataPacketLength(int dataLength)
