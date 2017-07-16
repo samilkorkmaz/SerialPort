@@ -40,6 +40,10 @@ namespace MySerialPort
             {
                 arraySize += bytes.Length;
             }
+            if (arraySize <= checksumLength)
+            {
+                throw new ArgumentOutOfRangeException(String.Format("Byte array size {0} must be larger than checksumLength {1}", arraySize, checksumLength));
+            }
             byte[] allReceivedBytes = new byte[arraySize];
             int iStart = 0;
             foreach (var bytes in receivedBytesList)
