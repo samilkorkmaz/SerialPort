@@ -8,8 +8,8 @@ namespace MySerialPort
         private static byte[] expected;
         private static byte[] received;
 
-        public static byte[] Expected { get { return expected; } }
-        public static byte[] Received { get { return received; } }
+        public static byte[] Expected { get => expected; }
+        public static byte[] Received { get => return received; }
 
         /// <summary>
         /// Convert byte array to hex string.
