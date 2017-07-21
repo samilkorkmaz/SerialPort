@@ -95,7 +95,7 @@ namespace MySerialPort
         private void sendWriteClick(object sender, RoutedEventArgs e)
         {
             byte[] dataSentBytes = Communication.prepareDataToSend(System.Convert.ToInt32(StartAddr.Text),
-                Communication.parseData(DataToSend.Text), MemoryType.SelectedIndex);
+                Communication.parseData(DataToSend.Text), MemoryType.SelectedIndex, Communication.INTENTION_COMMAND);
             DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", ", 0x");
             if (Communication.isSerialPortOk())
             {
@@ -107,7 +107,7 @@ namespace MySerialPort
         private void sendReadClick(object sender, RoutedEventArgs e)
         {
             byte[] dataReadBytes = Communication.prepareDataToRead(System.Convert.ToInt32(StartAddr.Text),
-                System.Convert.ToInt32(DataLength.Text), MemoryType.SelectedIndex);
+                System.Convert.ToInt32(DataLength.Text), MemoryType.SelectedIndex, Communication.INTENTION_COMMAND);
             DataSent.Text = "0x" + BitConverter.ToString(dataReadBytes).Replace("-", ", 0x");
             if (Communication.isSerialPortOk())
             {

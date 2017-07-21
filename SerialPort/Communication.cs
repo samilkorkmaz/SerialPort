@@ -23,7 +23,9 @@ namespace MySerialPort
         private static readonly byte EEPROM_MEMORY = 0x1B;
         private static readonly byte CPU_MEMORY = 0x1C;
 
-        private static readonly byte INTENTION_COMMAND = 0x00; //TODO
+        public static readonly byte INTENTION_LOG = 0x2A;
+        public static readonly byte INTENTION_COMMAND = 0x2B;
+        public static readonly byte INTENTION_CONFIG = 0x2C;
         private static readonly byte HEADER_LENGTH = 9;
         public static readonly byte CHECKSUM_LENGTH = 4;
         private static readonly byte DATA_START_INDEX = 10;
@@ -69,14 +71,14 @@ namespace MySerialPort
             return dataPacketLength;
         }
 
-        public static byte[] prepareDataToSend(int startAddr, byte[] data, int iMemory)
+        public static byte[] prepareDataToSend(int startAddr, byte[] data, int iMemory, byte intention)
         {
             byte dataPacketLength = getDataPacketLength(data.Length);
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
             dataSentBytes[1] = WRITE_COMMAND;
             dataSentBytes[2] = getMemoryType(iMemory);
-            dataSentBytes[3] = INTENTION_COMMAND;
+            dataSentBytes[3] = intention;
 
             byte[] lowAddr = BitConverter.GetBytes(startAddr);
             dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
@@ -121,14 +123,14 @@ namespace MySerialPort
         }
 
 
-        public static byte[] prepareDataToRead(int startAddr, int dataLength, int iMemory)
+        public static byte[] prepareDataToRead(int startAddr, int dataLength, int iMemory, byte intention)
         {
             byte dataPacketLength = getDataPacketLength(0);
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
             dataSentBytes[1] = READ_COMMAND;
             dataSentBytes[2] = getMemoryType(iMemory);
-            dataSentBytes[3] = INTENTION_COMMAND;
+            dataSentBytes[3] = intention;
 
             byte[] lowAddr = BitConverter.GetBytes(startAddr);
             dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
