@@ -51,6 +51,7 @@
     <Compile Include="TestCRC32.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestChecksumControl.cs" />
+    <Compile Include="TestCommunication.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

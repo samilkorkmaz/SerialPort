@@ -101,6 +101,9 @@ namespace MySerialPort
             {
                 reset();
                 Communication.sendToSerialPort(dataSentBytes, 0, dataSentBytes.Length);
+            } else
+            {
+                MessageBox.Show(Communication.getSerialPortStatus());
             }
         }
         
@@ -113,6 +116,9 @@ namespace MySerialPort
             {
                 reset();
                 Communication.sendToSerialPort(dataReadBytes, 0, dataReadBytes.Length);
+            } else
+            {
+                MessageBox.Show(Communication.getSerialPortStatus());
             }
         }
 

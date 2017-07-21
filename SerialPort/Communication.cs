@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.IO.Ports;
-using System.Windows;
 
 namespace MySerialPort
 {
-    class Communication
+    public class Communication
     {
         public static readonly string END_OF_RECEIVED_CARD_DATA = "END OF RECEIVED CARD DATA";
         public static readonly int HEX_BASE = 16;
@@ -16,12 +15,12 @@ namespace MySerialPort
         public static readonly int BAUD_RATE = 38400; //4.69KBit/s
         private static readonly byte MAX_DATA_PACKET_LENGTH = 250;
 
-        private static readonly byte READ_COMMAND = 0xAA;
-        private static readonly byte WRITE_COMMAND = 0xDD;
+        public static readonly byte READ_COMMAND = 0xAA;
+        public static readonly byte WRITE_COMMAND = 0xDD;
 
-        private static readonly byte SD_CARD_MEMORY = 0x1A;
-        private static readonly byte EEPROM_MEMORY = 0x1B;
-        private static readonly byte CPU_MEMORY = 0x1C;
+        public static readonly byte SD_CARD_MEMORY = 0x1A;
+        public static readonly byte EEPROM_MEMORY = 0x1B;
+        public static readonly byte CPU_MEMORY = 0x1C;
 
         public static readonly byte INTENTION_LOG = 0x2A;
         public static readonly byte INTENTION_COMMAND = 0x2B;
@@ -48,16 +47,22 @@ namespace MySerialPort
         }
 
         public static bool isSerialPortOk()
+        {            
+            return serialPort != null && serialPort.IsOpen;
+        }
+
+        public static string getSerialPortStatus()
         {
             if (serialPort == null)
             {
-                MessageBox.Show("serialPort == null");
-            }
-            else if (!serialPort.IsOpen)
+                return "serialPort == null";
+            } else if (!serialPort.IsOpen)
             {
-                MessageBox.Show("!serialPort.IsOpen");
+                return "!serialPort.IsOpen";
+            } else
+            {
+                return "OK";
             }
-            return serialPort != null && serialPort.IsOpen;
         }
 
         private static byte getDataPacketLength(int dataLength)
@@ -85,7 +90,7 @@ namespace MySerialPort
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length - 1;
+            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
             dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
             dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
@@ -137,7 +142,7 @@ namespace MySerialPort
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
+            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
             dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
             dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
