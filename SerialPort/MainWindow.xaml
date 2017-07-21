@@ -36,7 +36,7 @@
                 <Button x:Name="SendRead" Grid.Column = "2" Margin="0 10 0 0" Click="sendReadClick">Send (Read)</Button>
             </Grid>
             <TextBox x:Name="DataSent" Margin="0 10 0 0" ToolTip="Bytes sent to card">Data sent</TextBox>
-            <TextBox x:Name="DataReceived" Height="70" ToolTip="Bytes received from card">0xAB, 0xFF</TextBox>
+            <TextBox x:Name="DataReceived" Height="70" ToolTip="Bytes received from card">0x00, 0xAB, 0xFF</TextBox>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition></ColumnDefinition>

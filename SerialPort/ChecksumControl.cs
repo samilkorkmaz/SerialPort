@@ -21,7 +21,7 @@ namespace MySerialPort
             String str = "";
             for (int i = 0; i < array.Length; i++)
             {
-                str += System.Convert.ToString(array[i], MainWindow.HEX_BASE);
+                str += System.Convert.ToString(array[i], Communication.HEX_BASE);
             }
             return str;
         }
