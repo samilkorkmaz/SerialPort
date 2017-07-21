@@ -94,7 +94,7 @@ namespace MySerialPort
 
         private void sendWriteClick(object sender, RoutedEventArgs e)
         {
-            byte[] dataSentBytes = Communication.prepareDataToSend(System.Convert.ToInt32(StartAddr.Text),
+            byte[] dataSentBytes = Communication.prepareDataToWrite(System.Convert.ToInt32(StartAddr.Text),
                 Communication.parseData(DataToSend.Text), MemoryType.SelectedIndex, Communication.INTENTION_COMMAND);
             DataSent.Text = "0x" + BitConverter.ToString(dataSentBytes).Replace("-", ", 0x");
             if (Communication.isSerialPortOk())

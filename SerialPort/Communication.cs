@@ -76,8 +76,12 @@ namespace MySerialPort
             return dataPacketLength;
         }
 
-        public static byte[] prepareDataToSend(int startAddr, byte[] data, int iMemory, byte intention)
+        public static byte[] prepareDataToWrite(int startAddr, byte[] data, int iMemory, byte intention)
         {
+            if (data.Length < 1)
+            {
+                throw new ArgumentOutOfRangeException(String.Format("data.Length %d cannot be less than 1!", data.Length));
+            }
             byte dataPacketLength = getDataPacketLength(data.Length);
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
@@ -90,7 +94,7 @@ namespace MySerialPort
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length;
+            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length - 1;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
             dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
             dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
@@ -130,6 +134,10 @@ namespace MySerialPort
 
         public static byte[] prepareDataToRead(int startAddr, int dataLength, int iMemory, byte intention)
         {
+            if (dataLength < 1)
+            {
+                throw new ArgumentOutOfRangeException(String.Format("dataLength %d cannot be less than 1!", dataLength));
+            }
             byte dataPacketLength = getDataPacketLength(0);
             byte[] dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
@@ -142,7 +150,7 @@ namespace MySerialPort
             dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
             dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength;
+            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
             byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
             dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
             dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
