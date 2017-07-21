@@ -20,7 +20,6 @@
             <ComboBox x:Name="MemoryType">
                 <ComboBoxItem IsSelected="True">SD Card</ComboBoxItem>
                 <ComboBoxItem>EEPROM</ComboBoxItem>
-                <ComboBoxItem>Flash</ComboBoxItem>
                 <ComboBoxItem>CPU</ComboBoxItem>
             </ComboBox>
             <TextBox x:Name="DataToSend" ToolTip="Bytes to be sent to card" Margin="0 10 0 0">A</TextBox>

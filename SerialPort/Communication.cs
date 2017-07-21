@@ -21,8 +21,7 @@ namespace MySerialPort
 
         private static readonly byte SD_CARD_MEMORY = 0x1A;
         private static readonly byte EEPROM_MEMORY = 0x1B;
-        private static readonly byte FLASH_MEMORY = 0x1C;
-        private static readonly byte CPU_MEMORY = 0x1D;
+        private static readonly byte CPU_MEMORY = 0x1C;
 
         private static readonly byte INTENTION_COMMAND = 0x00; //TODO
         private static readonly byte HEADER_LENGTH = 9;
@@ -161,8 +160,6 @@ namespace MySerialPort
                 case 1:
                     return EEPROM_MEMORY;
                 case 2:
-                    return FLASH_MEMORY;
-                case 3:
                     return CPU_MEMORY;
                 default:
                     throw new Exception(String.Format("Uknown selection " + iMemory));
