@@ -18,12 +18,12 @@
             </Grid>
             <TextBlock x:Name="ConnectedTo" Margin="0 10 0 0">Connecting to ---</TextBlock>
             <ComboBox x:Name="MemoryType">
-                <ComboBoxItem IsSelected="True">SD Card</ComboBoxItem>
-                <ComboBoxItem>EEPROM</ComboBoxItem>
+                <ComboBoxItem>SD Card</ComboBoxItem>
+                <ComboBoxItem IsSelected="True">EEPROM</ComboBoxItem>
                 <ComboBoxItem>CPU</ComboBoxItem>
             </ComboBox>
             <TextBox x:Name="DataToSend" ToolTip="Data to be sent to card" Margin="0 10 0 0">A</TextBox>
-            <Button x:Name="SendWrite" Margin="0 10 0 0" Click="sendWriteClick">Send (Write)</Button>
+            <Button x:Name="SendWrite" Margin="0 10 0 0" Click="sendWriteClick" IsEnabled="False">Send (Write)</Button>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition></ColumnDefinition>
@@ -32,10 +32,10 @@
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="StartAddr" ToolTip="Start address" Grid.Column = "0" Margin="0 10 0 0">1</TextBox>
                 <TextBox x:Name="DataLength" ToolTip="Data length" Grid.Column = "1" Margin="0 10 0 0">5</TextBox>
-                <Button x:Name="SendRead" Grid.Column = "2" Margin="0 10 0 0" Click="sendReadClick">Send (Read)</Button>
+                <Button x:Name="SendRead" Grid.Column = "2" Margin="0 10 0 0" Click="sendReadClick" IsEnabled="False">Send (Read)</Button>
             </Grid>
             <TextBox x:Name="DataSent" Margin="0 10 0 0" ToolTip="Bytes sent to card">Data sent</TextBox>
-            <TextBox x:Name="DataReceived" Height="70" ToolTip="Bytes received from card">0x00, 0xAB, 0xFF</TextBox>
+            <TextBox x:Name="DataReceived" Height="170" ToolTip="Bytes received from card">0x00, 0xAB, 0xFF</TextBox>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition></ColumnDefinition>
@@ -44,7 +44,7 @@
                 <Button x:Name="CloseSerialPort" Click="closeSerialPortClick" IsEnabled="False" Grid.Column="0">Close serial port</Button>
                 <Button x:Name="Convert" Click="Convert_Click" IsEnabled="True" Grid.Column="1">Convert</Button>
             </Grid>
-            <TextBox x:Name="ConvertedData" Margin="0 10 0 0" Height="250"/>
+            <TextBox x:Name="ConvertedData" Margin="0 10 0 0" Height="150"/>
         </StackPanel>
     </Border>
 </Window>

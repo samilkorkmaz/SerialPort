@@ -6,7 +6,7 @@ namespace MySerialPort
 {
     public class Communication
     {
-        public static readonly string END_OF_RECEIVED_CARD_DATA = "END OF RECEIVED CARD DATA";
+        public static readonly string END_OF_RECEIVED_CARD_DATA = "-END OF RECEIVED CARD DATA";
         public static readonly int HEX_BASE = 16;
         private static SerialPort serialPort;
         private static Crc32 crc32 = new Crc32();
@@ -36,9 +36,12 @@ namespace MySerialPort
             serialPort.Write(buffer, offset, count);
         }
 
-        public static String readFromSerialPort()
+        public static byte[] readFromSerialPort()
         {
-            return serialPort.ReadExisting();
+            //return serialPort.ReadExisting();
+            byte[] dataReceivedFromCard = new byte[Communication.serialPort.BytesToRead];
+            serialPort.Read(dataReceivedFromCard, 0, dataReceivedFromCard.Length);
+            return dataReceivedFromCard;
         }
 
         public static Crc32 getCrc32()
@@ -221,6 +224,7 @@ namespace MySerialPort
                 dataTemp[i] = (byte)rnd.Next(1, 0xFF);  // 1 <= dataTemp[i] < 255;
             }
             return dataTemp;
+            //return new byte[] { 0x35, 0x44, 0x15, 0xC1, 0xD0 };
         }
 
         //https://stackoverflow.com/a/228060/51358

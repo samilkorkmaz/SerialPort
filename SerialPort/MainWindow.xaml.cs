@@ -14,16 +14,14 @@ namespace MySerialPort
     /// Protocol reference: https://docs.google.com/document/d/1Nx-vx0cXp-aIgKuCpmPjQVIvB5yWJyjRDjy-y_SSSkc
     /// </summary>
     public partial class MainWindow : Window
-    {        
-        private byte[] receivedBytes;
+    {
         private byte expectedReceivedDataLength;
-        private bool transmissionJustStarted;
         private int totalBytesReceived;
         private bool isTranmissionEnded;
         private static readonly int TIMEOUT_LIMIT_MS = 2 * 1000;
         private static readonly int TIMEOUT_CHECK_INTERVAL_MS = 100;
         private List<byte[]> receivedBytesList;
-        
+
         public MainWindow()
         {
             InitializeComponent();
@@ -32,37 +30,41 @@ namespace MySerialPort
                 AvailableSerialPorts.Items.Add(s);
             }
             AvailableSerialPorts.SelectedIndex = AvailableSerialPorts.Items.Count - 1;
-            byte[] dataTemp = Communication.generateRandomData(3);
+            byte[] dataTemp = Communication.generateRandomData(5);
             DataToSend.Text = Communication.toHexString(dataTemp);
         }
-        
+
         //Event handler is triggered/run on a NON-UI thread
         private void dataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            // All the incoming data in the port's buffer
-            string dataReceived = Communication.readFromSerialPort();
-            receivedBytes = Encoding.ASCII.GetBytes(dataReceived);
-            receivedBytesList.Add(receivedBytes);
-            if (transmissionJustStarted)
-            {
-                expectedReceivedDataLength = receivedBytes[0];
-                transmissionJustStarted = false;
+            if (!isTranmissionEnded) //TODO do we need this if? If yes, then we need a mechanism to verify that data sending has stopped so that we can start the next command
+            {                
+                byte[] dataReceivedFromCard = Communication.readFromSerialPort();
+                receivedBytesList.Add(dataReceivedFromCard);
+                totalBytesReceived += dataReceivedFromCard.Length;
+                String endStr = "";
+                if (totalBytesReceived == expectedReceivedDataLength)
+                {
+                    endStr = Communication.END_OF_RECEIVED_CARD_DATA;
+                    isTranmissionEnded = true;
+                }
+                if (totalBytesReceived > expectedReceivedDataLength)
+                {
+                    string msg = String.Format("totalBytesReceived ({0}) > expectedReceivedDataLength ({1})",
+                        totalBytesReceived, expectedReceivedDataLength);
+                    endStr = Communication.END_OF_RECEIVED_CARD_DATA;
+                    isTranmissionEnded = true;
+                    MessageBox.Show(msg);
+                    //throw new ArgumentOutOfRangeException(msg);                
+                }
+                //Update UI:
+                Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteDataToUI), BitConverter.ToString(dataReceivedFromCard) + endStr);
             }
-            totalBytesReceived += receivedBytes.Length;
-            String endStr = "";
-            if (totalBytesReceived == expectedReceivedDataLength)
-            {
-                endStr = Communication.END_OF_RECEIVED_CARD_DATA;
-                isTranmissionEnded = true;
-            }
-            //Update UI:
-            Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(WriteData),
-                BitConverter.ToString(receivedBytes) + endStr);
         }
 
         private delegate void UpdateUiTextDelegate(string text);
 
-        private void WriteData(string text)
+        private void WriteDataToUI(string text)
         {
             DataReceived.Text = DataReceived.Text + Communication.getTimeStampedStr(text);
         }
@@ -72,7 +74,7 @@ namespace MySerialPort
             String portName = AvailableSerialPorts.SelectedItem.ToString();
             try
             {
-                Communication.openSerialPort(new SerialPort(portName, Communication.BAUD_RATE, Parity.None, 8, StopBits.One), 
+                Communication.openSerialPort(new SerialPort(portName, Communication.BAUD_RATE, Parity.None, 8, StopBits.One),
                     new SerialDataReceivedEventHandler(dataReceived));
                 ConnectedTo.Text = "Connected to " + portName;
                 connectionEnabled(true);
@@ -87,6 +89,7 @@ namespace MySerialPort
         {
             Connect.IsEnabled = !isEnabled;
             SendWrite.IsEnabled = isEnabled;
+            SendRead.IsEnabled = isEnabled;
             CloseSerialPort.IsEnabled = isEnabled;
             DataReceived.Text = "";
             DataSent.Text = "";
@@ -100,13 +103,15 @@ namespace MySerialPort
             if (Communication.isSerialPortOk())
             {
                 reset();
+                expectedReceivedDataLength = 1 + 4;
                 Communication.sendToSerialPort(dataSentBytes, 0, dataSentBytes.Length);
-            } else
+            }
+            else
             {
                 MessageBox.Show(Communication.getSerialPortStatus());
             }
         }
-        
+
         private void sendReadClick(object sender, RoutedEventArgs e)
         {
             byte[] dataReadBytes = Communication.prepareDataToRead(System.Convert.ToInt32(StartAddr.Text),
@@ -115,8 +120,10 @@ namespace MySerialPort
             if (Communication.isSerialPortOk())
             {
                 reset();
+                expectedReceivedDataLength = (byte)(1 + System.Convert.ToInt32(DataLength.Text) + 4);
                 Communication.sendToSerialPort(dataReadBytes, 0, dataReadBytes.Length);
-            } else
+            }
+            else
             {
                 MessageBox.Show(Communication.getSerialPortStatus());
             }
@@ -124,7 +131,6 @@ namespace MySerialPort
 
         private void reset()
         {
-            transmissionJustStarted = true;
             totalBytesReceived = 0;
             isTranmissionEnded = false;
             receivedBytesList = new List<byte[]>();
@@ -157,14 +163,14 @@ namespace MySerialPort
                 if (isTranmissionEnded)
                 {
                     MessageBox.Show(String.Format("Transmission ended at t = {0} ms.", t_ms));
-                    if (!ChecksumControl.isChecksumOk(receivedBytesList, Communication.getCrc32(), Communication.CHECKSUM_LENGTH))
+                    /*if (!ChecksumControl.isChecksumOk(receivedBytesList, Communication.getCrc32(), Communication.CHECKSUM_LENGTH))
                     {
                         MessageBox.Show(String.Format("Received crc32 byte {0} not as expected {1}!",
                             ChecksumControl.getByteArrayAsString(ChecksumControl.Received),
                             ChecksumControl.getByteArrayAsString(ChecksumControl.Expected)));
                         DataReceived.Dispatcher.Invoke(new UpdateReceivedDataTextCallback(UpdateReceivedDataText),
                             new object[] { "ERROR: Checksum wrong!" });
-                    }
+                    }*/
                     break;
                 }
                 Thread.Sleep(TIMEOUT_CHECK_INTERVAL_MS);
@@ -178,18 +184,18 @@ namespace MySerialPort
         {
             DataReceived.Text = message;
         }
-        
+
         private void closeSerialPortClick(object sender, RoutedEventArgs e)
         {
             Communication.closeSerialPort();
             connectionEnabled(false);
             ConnectedTo.Text = "Connection closed";
         }
-        
+
         private void Convert_Click(object sender, RoutedEventArgs e)
         {
             ConvertedData.Text = Communication.convertHexToStr(DataReceived.Text);
         }
-        
+
     }
 }
