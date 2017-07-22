@@ -105,7 +105,22 @@ namespace TestSerialPort
             {
                 Assert.IsTrue(true);
             }
-            
+        }
+
+        [TestMethod]
+        public void TestRemoveTimeStamps1()
+        {
+            string str = MySerialPort.Communication.removeTimeStamps("[12:13:56] samil");
+            string expectedStr = " samil";
+            Assert.AreEqual(expectedStr, str);
+        }
+
+        [TestMethod]
+        public void TestRemoveTimeStamps2()
+        {
+            string str = MySerialPort.Communication.removeTimeStamps("[12:13:56] samil\n[12:13:56:99] korkmaz");
+            string expectedStr = " samil\n korkmaz";
+            Assert.AreEqual(expectedStr, str);
         }
     }
 }

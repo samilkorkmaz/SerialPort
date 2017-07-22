@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO.Ports;
 
 namespace MySerialPort
 {
     public class Communication
     {
-        public static readonly string END_OF_RECEIVED_CARD_DATA = "-END OF RECEIVED CARD DATA";
         public static readonly int HEX_BASE = 16;
         private static SerialPort serialPort;
         private static Crc32 crc32 = new Crc32();
@@ -31,7 +31,7 @@ namespace MySerialPort
         private static readonly byte LOW_ADDR_START_INDEX = 4;
         private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
 
-        public static void sendToSerialPort(byte [] buffer, int offset, int count)
+        public static void sendToSerialPort(byte[] buffer, int offset, int count)
         {
             serialPort.Write(buffer, offset, count);
         }
@@ -39,9 +39,9 @@ namespace MySerialPort
         public static byte[] readFromSerialPort()
         {
             //return serialPort.ReadExisting();
-            byte[] dataReceivedFromCard = new byte[Communication.serialPort.BytesToRead];
-            serialPort.Read(dataReceivedFromCard, 0, dataReceivedFromCard.Length);
-            return dataReceivedFromCard;
+            byte[] bytesReceivedFromCard = new byte[Communication.serialPort.BytesToRead];
+            serialPort.Read(bytesReceivedFromCard, 0, bytesReceivedFromCard.Length);
+            return bytesReceivedFromCard;
         }
 
         public static Crc32 getCrc32()
@@ -50,7 +50,7 @@ namespace MySerialPort
         }
 
         public static bool isSerialPortOk()
-        {            
+        {
             return serialPort != null && serialPort.IsOpen;
         }
 
@@ -59,10 +59,12 @@ namespace MySerialPort
             if (serialPort == null)
             {
                 return "serialPort == null";
-            } else if (!serialPort.IsOpen)
+            }
+            else if (!serialPort.IsOpen)
             {
                 return "!serialPort.IsOpen";
-            } else
+            }
+            else
             {
                 return "OK";
             }
@@ -238,31 +240,25 @@ namespace MySerialPort
         public static string convertHexToStr(string dataStr)
         {
             string convertedStr = "";
+            string timeStampsRemovedStr = removeTimeStamps(dataStr);
             try
             {
-                int iEnd = dataStr.IndexOf(END_OF_RECEIVED_CARD_DATA);
-                if (iEnd >= 0)
-                {
-                    dataStr = dataStr.Substring(0, dataStr.Length - END_OF_RECEIVED_CARD_DATA.Length);
-                }
-                //byte[] dataBytes = Encoding.ASCII.GetBytes(dataStr);
-                byte[] dataBytes = Communication.parseData(dataStr);
+                byte[] dataBytes = parseData(timeStampsRemovedStr);
                 BitArray bits = new BitArray(dataBytes);
-                //BitArray bits = new BitArray(new byte[1] { 1 });
                 int iByte = 0;
                 string bitStr = "";
                 for (int counter = 0; counter < bits.Length; counter++)
                 {
                     if (counter % 8 == 0)
                     {
-                        if (dataBytes[iByte] == Communication.NEW_LINE)
+                        if (dataBytes[iByte] == NEW_LINE)
                         {
                             convertedStr = convertedStr + "\\n" + ": " + dataBytes[iByte].ToString() + ": ";
                             iByte++;
                         }
                         else
                         {
-                            convertedStr = convertedStr + System.Convert.ToString(dataBytes[iByte], Communication.HEX_BASE).ToUpper() + ": ";
+                            convertedStr = convertedStr + System.Convert.ToString(dataBytes[iByte], HEX_BASE).ToUpper() + ": ";
                             iByte++;
                         }
                     }
@@ -277,10 +273,30 @@ namespace MySerialPort
             }
             catch (Exception)
             {
-                convertedStr = convertedStr + String.Format("\"{0}\" string is not in hex format, cannot convert!\n", dataStr);
+                convertedStr = convertedStr + String.Format("\"{0}\" string is not in hex format, cannot convert!\n", timeStampsRemovedStr);
             }
             return convertedStr;
         }
+
+        public static string removeTimeStamps(string dataStr)
+        {
+            string strWithoutTimeStamps = dataStr;
+            while (true)
+            {
+                int iStart = strWithoutTimeStamps.IndexOf("[");
+                int iEnd = strWithoutTimeStamps.IndexOf("]");
+                if (iStart > -1 && iEnd > -1)
+                {
+                    strWithoutTimeStamps = strWithoutTimeStamps.Remove(iStart, iEnd - iStart + 1);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return strWithoutTimeStamps;
+        }
+
     }
 
 }
