@@ -14,7 +14,6 @@ namespace MySerialPort
         public MainWindow()
         {
             InitializeComponent();
-
             foreach (string s in SerialPort.GetPortNames())
             {
                 AvailableSerialPorts.Items.Add(s);
@@ -28,7 +27,7 @@ namespace MySerialPort
 
         private void WriteDataToUI(string text)
         {
-            DataReceived.Text = DataReceived.Text + Communication.getTimeStampedStr(removeDashes(text));
+            DataReceived.Text += Communication.getTimeStampedStr(removeDashes(text));
         }
 
         private class SerialPortUpdate : ISerialPortUpdate

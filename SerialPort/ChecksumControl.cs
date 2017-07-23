@@ -44,17 +44,17 @@ namespace MySerialPort
             {
                 throw new ArgumentOutOfRangeException(String.Format("Byte array size {0} must be larger than checksumLength {1}", arraySize, checksumLength));
             }
-            byte[] allReceivedBytes = new byte[arraySize];
+            var allReceivedBytes = new byte[arraySize];
             int iStart = 0;
             foreach (var bytes in receivedBytesList)
             {
                 Array.Copy(bytes, 0, allReceivedBytes, iStart, bytes.Length);
                 iStart += bytes.Length;
             }
-            byte[] receivedBytesWithoutChecksum = new byte[arraySize - checksumLength];
+            var receivedBytesWithoutChecksum = new byte[arraySize - checksumLength];
             Array.Copy(allReceivedBytes, receivedBytesWithoutChecksum, arraySize - checksumLength);
             byte[] expectedCrc32 = crc32.ComputeHash(receivedBytesWithoutChecksum);
-            byte[] receivedCrc32 = new byte[checksumLength];
+            var receivedCrc32 = new byte[checksumLength];
             Array.Copy(allReceivedBytes, allReceivedBytes.Length - checksumLength, receivedCrc32, 0, checksumLength);
             expected = expectedCrc32;
             received = receivedCrc32;

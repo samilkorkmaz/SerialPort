@@ -49,7 +49,7 @@ namespace MySerialPort
             totalBytesReceived = 0;
             isTranmissionEnded = false;
             receivedBytesList = new List<byte[]>();
-            Thread t = new Thread(checkTimeout);
+            var t = new Thread(checkTimeout);
             t.Start();
         }
 
@@ -98,7 +98,7 @@ namespace MySerialPort
 
         public static byte[] readFromSerialPort()
         {
-            byte[] bytesReceivedFromCard = new byte[serialPort.BytesToRead];
+            var bytesReceivedFromCard = new byte[serialPort.BytesToRead];
             serialPort.Read(bytesReceivedFromCard, 0, bytesReceivedFromCard.Length);
             return bytesReceivedFromCard;
         }
@@ -147,7 +147,7 @@ namespace MySerialPort
                 throw new ArgumentOutOfRangeException(String.Format("data.Length %d cannot be less than 1!", data.Length));
             }
             byte dataPacketLength = getDataPacketLength(data.Length);
-            byte[] dataSentBytes = new byte[dataPacketLength];
+            var dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
             dataSentBytes[1] = WRITE_COMMAND;
             dataSentBytes[2] = getMemoryType(iMemory);
@@ -273,11 +273,11 @@ namespace MySerialPort
 
         public static byte[] parseData(String text)
         {
-            string[] strings = text.Split(',');
-            byte[] bytes = new byte[strings.Length];
+            var strings = text.Split(',');
+            var bytes = new byte[strings.Length];
             for (int i = 0; i < strings.Length; i++)
             {
-                string s = strings[i];
+                var s = strings[i];
                 if (!String.IsNullOrEmpty(s.Trim()))
                 {
                     bytes[i] = System.Convert.ToByte(s.Trim().Substring(2, 2), HEX_BASE); //Remove "0x" part
@@ -292,10 +292,10 @@ namespace MySerialPort
 
         public static string toHexString(byte[] bytes)
         {
-            string s = "";
+            var s = "";
             foreach (var b in bytes)
             {
-                s = s + String.Format(HEX_START + "{0}, ", System.Convert.ToString(b, Communication.HEX_BASE).ToUpper());
+                s += String.Format(HEX_START + "{0}, ", System.Convert.ToString(b, Communication.HEX_BASE).ToUpper());
             }
             //remove last comma
             s = s.Substring(0, s.Length - 2);

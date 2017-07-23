@@ -15,7 +15,7 @@ namespace TestSerialPort
         [TestMethod]
         public void TestIsChecksumOk1()
         {
-            List<byte[]> receivedList = new List<byte[]>();
+            var receivedList = new List<byte[]>();
             receivedList.Add(new byte[] { 0x00, 0x00, 0x00, 0x00 });
             byte[] checksum = { 0x21, 0x44, 0xDF, 0x1C };
             receivedList.Add(checksum);
@@ -26,7 +26,7 @@ namespace TestSerialPort
         [TestMethod]
         public void TestIsChecksumOk2()
         {
-            List<byte[]> receivedList = new List<byte[]>();
+            var receivedList = new List<byte[]>();
             receivedList.Add(new byte[] { 0xE9, 0x5C, 0xA8, 0xEE, 0xFF, 0x8D, 0xFA, 0xD9, 0xC4, 0xEA });
             byte[] checksum = { 0xBF, 0x54, 0xE3, 0x63 };
             receivedList.Add(checksum);
@@ -42,7 +42,7 @@ namespace TestSerialPort
         {
             try
             {
-                List<byte[]> receivedList = new List<byte[]>();
+                var receivedList = new List<byte[]>();
                 receivedList.Add(new byte[] { });
                 byte[] checksum = { 0xBF, 0x54, 0xE3, 0x63 };
                 receivedList.Add(checksum);
@@ -60,7 +60,7 @@ namespace TestSerialPort
         {
             try
             {
-                List<byte[]> receivedList = new List<byte[]>();
+                var receivedList = new List<byte[]>();
                 receivedList.Add(new byte[] { });
                 byte[] checksum = { };
                 receivedList.Add(checksum);
