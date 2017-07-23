@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MySerialPort.Model;
 using System;
 
 namespace TestSerialPort
@@ -12,10 +13,10 @@ namespace TestSerialPort
             int startAddr = 0;
             int dataLength = 0;
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
+            byte intention = Communication.INTENTION_LOG;
             try
             {
-                byte[] dataToRead = MySerialPort.Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
+                byte[] dataToRead = Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
                 Assert.IsTrue(false);            }
             catch (ArgumentOutOfRangeException)
             {
@@ -29,10 +30,10 @@ namespace TestSerialPort
             int startAddr = 0;
             int dataLength = 3;
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
-            byte[] dataToRead = MySerialPort.Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
-            byte[] expectedDataToRead = {14, MySerialPort.Communication.READ_COMMAND, MySerialPort.Communication.EEPROM_MEMORY,
-                MySerialPort.Communication.INTENTION_LOG,
+            byte intention = Communication.INTENTION_LOG;
+            byte[] dataToRead = Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
+            byte[] expectedDataToRead = {14, Communication.READ_COMMAND, Communication.EEPROM_MEMORY,
+                Communication.INTENTION_LOG,
                 0x00, 0x00, 0x00,
                 0x02, 0x00, 0x00,
                 0xC5, 0x51, 0xCF, 0x76};
@@ -45,10 +46,10 @@ namespace TestSerialPort
             int startAddr = 8000004; //fills all 3 bytes reserved for lowerAddr
             int dataLength = 13;
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
-            byte[] dataToRead = MySerialPort.Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
-            byte[] expectedDataToRead = {14, MySerialPort.Communication.READ_COMMAND, MySerialPort.Communication.EEPROM_MEMORY,
-                MySerialPort.Communication.INTENTION_LOG,
+            byte intention = Communication.INTENTION_LOG;
+            byte[] dataToRead = Communication.prepareDataToRead(startAddr, dataLength, iMemory, intention);
+            byte[] expectedDataToRead = {14, Communication.READ_COMMAND, Communication.EEPROM_MEMORY,
+                Communication.INTENTION_LOG,
                 0x04, 0x12, 0x7A,
                 0x10, 0x12, 0x7A,
                 0x97, 0xE4, 0x96, 0x95};
@@ -60,11 +61,11 @@ namespace TestSerialPort
         {
             int startAddr = 8000004; //fills all 3 bytes reserved for lowerAddr
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
+            byte intention = Communication.INTENTION_LOG;
             byte[] data = {0xAB};
-            byte[] dataToWrite = MySerialPort.Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
-            byte[] expectedDataToWrite = {(byte)(14 + data.Length), MySerialPort.Communication.WRITE_COMMAND, MySerialPort.Communication.EEPROM_MEMORY,
-                MySerialPort.Communication.INTENTION_LOG,
+            byte[] dataToWrite = Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
+            byte[] expectedDataToWrite = {(byte)(14 + data.Length), Communication.WRITE_COMMAND, Communication.EEPROM_MEMORY,
+                Communication.INTENTION_LOG,
                 0x04, 0x12, 0x7A,
                 0x04, 0x12, 0x7A,
                 0xAB,
@@ -77,11 +78,11 @@ namespace TestSerialPort
         {
             int startAddr = 8000004; //fills all 3 bytes reserved for lowerAddr
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
+            byte intention = Communication.INTENTION_LOG;
             byte[] data = { 0xAB, 0xCD, 0xEF, 0xFF };
-            byte[] dataToWrite = MySerialPort.Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
-            byte[] expectedDataToWrite = {(byte)(14 + data.Length), MySerialPort.Communication.WRITE_COMMAND, MySerialPort.Communication.EEPROM_MEMORY,
-                MySerialPort.Communication.INTENTION_LOG,
+            byte[] dataToWrite = Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
+            byte[] expectedDataToWrite = {(byte)(14 + data.Length), Communication.WRITE_COMMAND, Communication.EEPROM_MEMORY,
+                Communication.INTENTION_LOG,
                 0x04, 0x12, 0x7A,
                 0x07, 0x12, 0x7A,
                 0xAB, 0xCD, 0xEF, 0xFF,
@@ -94,11 +95,11 @@ namespace TestSerialPort
         {
             int startAddr = 8000004; //fills all 3 bytes reserved for lowerAddr
             int iMemory = 1;
-            byte intention = MySerialPort.Communication.INTENTION_LOG;
+            byte intention = Communication.INTENTION_LOG;
             byte[] data = { };
             try
             {
-                byte[] dataToWrite = MySerialPort.Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
+                byte[] dataToWrite = Communication.prepareDataToWrite(startAddr, data, iMemory, intention);
                 Assert.IsTrue(false);
             }
             catch (ArgumentOutOfRangeException)
@@ -110,7 +111,7 @@ namespace TestSerialPort
         [TestMethod]
         public void TestRemoveTimeStamps1()
         {
-            string str = MySerialPort.Communication.removeTimeStamps("[12:13:56] samil");
+            string str = Communication.removeTimeStamps("[12:13:56] samil");
             string expectedStr = " samil";
             Assert.AreEqual(expectedStr, str);
         }
@@ -118,7 +119,7 @@ namespace TestSerialPort
         [TestMethod]
         public void TestRemoveTimeStamps2()
         {
-            string str = MySerialPort.Communication.removeTimeStamps("[12:13:56] samil\n[12:13:56:99] korkmaz");
+            string str = Communication.removeTimeStamps("[12:13:56] samil\n[12:13:56:99] korkmaz");
             string expectedStr = " samil\n korkmaz";
             Assert.AreEqual(expectedStr, str);
         }

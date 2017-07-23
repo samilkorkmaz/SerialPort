@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MySerialPort
+namespace MySerialPort.Model
 {
     public class ChecksumControl
     {

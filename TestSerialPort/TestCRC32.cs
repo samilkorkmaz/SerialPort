@@ -1,5 +1,5 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MySerialPort.Model;
 
 namespace TestSerialPort
 {
@@ -9,7 +9,7 @@ namespace TestSerialPort
         /// <summary>
         /// CRC32 reference values generated using http://www.sunshine2k.de/coding/javascript/crc/crc_js.html
         /// </summary>
-        MySerialPort.Crc32 crc32 = new MySerialPort.Crc32();
+        Crc32 crc32 = new Crc32();
 
         [TestMethod]
         public void TestComputeHash1()
