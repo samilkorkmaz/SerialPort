@@ -2,11 +2,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO.Ports;
+using System.Threading;
 
 namespace MySerialPort
 {
     public class Communication
     {
+        public static readonly string HEX_START = "0x";
+
+        private static int expectedTotalBytesReceived;
+        private static int totalBytesReceived;
+        private static bool isTranmissionEnded;
+        private static List<byte[]> receivedBytesList;
+        private static ISerialPortUpdate serialPortUpdate;
+
         public static readonly int HEX_BASE = 16;
         private static SerialPort serialPort;
         private static Crc32 crc32 = new Crc32();
@@ -31,15 +40,65 @@ namespace MySerialPort
         private static readonly byte LOW_ADDR_START_INDEX = 4;
         private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
 
-        public static void sendToSerialPort(byte[] buffer, int offset, int count)
+        private static readonly int TIMEOUT_LIMIT_MS = 2 * 1000;
+        private static readonly int TIMEOUT_CHECK_INTERVAL_MS = 100;
+
+
+        private static void reset()
         {
+            totalBytesReceived = 0;
+            isTranmissionEnded = false;
+            receivedBytesList = new List<byte[]>();
+            Thread t = new Thread(checkTimeout);
+            t.Start();
+        }
+
+        private static void checkTimeout()
+        {
+            int iTimeout = 1;
+            int t_ms = 0;
+            while (true)
+            {
+                if (t_ms > iTimeout * TIMEOUT_LIMIT_MS)
+                {
+                    bool continueAfterTimeout = serialPortUpdate.ContinueAfterTimeout(iTimeout * TIMEOUT_LIMIT_MS, iTimeout);
+                    if (continueAfterTimeout)
+                    {
+                        iTimeout *= 2;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                if (isTranmissionEnded)
+                {
+                    serialPortUpdate.transmissionEnd(String.Format("Transmission ended at t = {0} ms.", t_ms));
+                    /*if (!ChecksumControl.isChecksumOk(receivedBytesList, Communication.getCrc32(), Communication.CHECKSUM_LENGTH))
+                    {
+                        MessageBox.Show(String.Format("Received crc32 byte {0} not as expected {1}!",
+                            ChecksumControl.getByteArrayAsString(ChecksumControl.Received),
+                            ChecksumControl.getByteArrayAsString(ChecksumControl.Expected)));
+                        DataReceived.Dispatcher.Invoke(new UpdateReceivedDataTextCallback(UpdateReceivedDataText),
+                            new object[] { "ERROR: Checksum wrong!" });
+                    }*/
+                    break;
+                }
+                Thread.Sleep(TIMEOUT_CHECK_INTERVAL_MS);
+                t_ms += TIMEOUT_CHECK_INTERVAL_MS;
+            }
+        }
+
+        public static void sendToSerialPort(byte[] buffer, int offset, int count, int dataLength)
+        {
+            reset();
+            expectedTotalBytesReceived = 1 + dataLength + CHECKSUM_LENGTH;
             serialPort.Write(buffer, offset, count);
         }
 
         public static byte[] readFromSerialPort()
         {
-            //return serialPort.ReadExisting();
-            byte[] bytesReceivedFromCard = new byte[Communication.serialPort.BytesToRead];
+            byte[] bytesReceivedFromCard = new byte[serialPort.BytesToRead];
             serialPort.Read(bytesReceivedFromCard, 0, bytesReceivedFromCard.Length);
             return bytesReceivedFromCard;
         }
@@ -118,12 +177,38 @@ namespace MySerialPort
             return dataSentBytes;
         }
 
-        internal static void openSerialPort(SerialPort serialPort, SerialDataReceivedEventHandler serialDataReceivedEventHandler)
+        public static void openSerialPort(SerialPort serialPort, ISerialPortUpdate serialPortUpdate)
         {
             Communication.serialPort = serialPort;
             serialPort.Open();
             // Attach a method to be called when there is data waiting in the port's buffer
-            serialPort.DataReceived += serialDataReceivedEventHandler;
+            Communication.serialPortUpdate = serialPortUpdate;
+            serialPort.DataReceived += dataReceived;
+        }
+
+        //Event handler is triggered/run on a NON-UI thread
+        private static void dataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (!isTranmissionEnded) //TODO do we need this if? If yes, then we need a mechanism to verify that data sending has stopped so that we can start the next command
+            {
+                byte[] bytesReceivedFromCard = Communication.readFromSerialPort();
+                receivedBytesList.Add(bytesReceivedFromCard);
+                totalBytesReceived += bytesReceivedFromCard.Length;
+                if (totalBytesReceived == expectedTotalBytesReceived)
+                {
+                    isTranmissionEnded = true;
+                }
+                if (totalBytesReceived > expectedTotalBytesReceived)
+                {
+                    string msg = String.Format("totalBytesReceived ({0}) > expectedReceivedDataLength ({1})",
+                        totalBytesReceived, expectedTotalBytesReceived);
+                    isTranmissionEnded = true;
+                    serialPortUpdate.transmissionEnd(msg);
+                    //throw new ArgumentOutOfRangeException(msg);                
+                }
+                //Update UI:
+                serialPortUpdate.update(bytesReceivedFromCard);
+            }
         }
 
         internal static void closeSerialPort()
@@ -210,7 +295,7 @@ namespace MySerialPort
             string s = "";
             foreach (var b in bytes)
             {
-                s = s + String.Format("0x{0}, ", System.Convert.ToString(b, Communication.HEX_BASE).ToUpper());
+                s = s + String.Format(HEX_START + "{0}, ", System.Convert.ToString(b, Communication.HEX_BASE).ToUpper());
             }
             //remove last comma
             s = s.Substring(0, s.Length - 2);
