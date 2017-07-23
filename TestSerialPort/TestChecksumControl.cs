@@ -11,7 +11,7 @@ namespace TestSerialPort
     [TestClass]
     public class TestChecksumControl
     {
-        Crc32 crc32 = new Crc32();
+        private readonly Crc32 _crc32 = new Crc32();
 
         [TestMethod]
         public void TestIsChecksumOk1()
@@ -20,22 +20,23 @@ namespace TestSerialPort
             receivedList.Add(new byte[] { 0x00, 0x00, 0x00, 0x00 });
             byte[] checksum = { 0x21, 0x44, 0xDF, 0x1C };
             receivedList.Add(checksum);
-            bool isOK = ChecksumControl.isChecksumOk(receivedList, crc32, 4);
-            Assert.IsTrue(isOK);
+            var isOk = ChecksumControl.IsChecksumOk(receivedList, _crc32, 4);
+            Assert.IsTrue(isOk);
         }
 
         [TestMethod]
         public void TestIsChecksumOk2()
         {
-            var receivedList = new List<byte[]>();
-            receivedList.Add(new byte[] { 0xE9, 0x5C, 0xA8, 0xEE, 0xFF, 0x8D, 0xFA, 0xD9, 0xC4, 0xEA });
+            var receivedList = new List<byte[]>
+            {
+                new byte[] {0xE9, 0x5C, 0xA8, 0xEE, 0xFF, 0x8D, 0xFA, 0xD9, 0xC4, 0xEA}
+            };
             byte[] checksum = { 0xBF, 0x54, 0xE3, 0x63 };
             receivedList.Add(checksum);
-            bool isOK = ChecksumControl.isChecksumOk(receivedList, crc32, 4);
-            String str = String.Format("Received = {0}, Expected = {1}",
-                ChecksumControl.getByteArrayAsString(ChecksumControl.Received),
-                ChecksumControl.getByteArrayAsString(ChecksumControl.Expected));
-            Assert.IsTrue(isOK);
+            var isOk = ChecksumControl.IsChecksumOk(receivedList, _crc32, 4);
+            var unused =
+                $"Received = {ChecksumControl.GetByteArrayAsString(ChecksumControl.Received)}, Expected = {ChecksumControl.GetByteArrayAsString(ChecksumControl.Expected)}";
+            Assert.IsTrue(isOk);
         }
 
         [TestMethod]
@@ -43,11 +44,10 @@ namespace TestSerialPort
         {
             try
             {
-                var receivedList = new List<byte[]>();
-                receivedList.Add(new byte[] { });
+                var receivedList = new List<byte[]> {new byte[] { }};
                 byte[] checksum = { 0xBF, 0x54, 0xE3, 0x63 };
                 receivedList.Add(checksum);
-                bool isOK = ChecksumControl.isChecksumOk(receivedList, crc32, 4);
+                ChecksumControl.IsChecksumOk(receivedList, _crc32, 4);
                 Assert.IsTrue(false);
             }
             catch (ArgumentOutOfRangeException e)
@@ -61,11 +61,10 @@ namespace TestSerialPort
         {
             try
             {
-                var receivedList = new List<byte[]>();
-                receivedList.Add(new byte[] { });
+                var receivedList = new List<byte[]> {new byte[] { }};
                 byte[] checksum = { };
                 receivedList.Add(checksum);
-                bool isOK = ChecksumControl.isChecksumOk(receivedList, crc32, 4);
+                ChecksumControl.IsChecksumOk(receivedList, _crc32, 4);
                 Assert.IsTrue(false);
             }
             catch (ArgumentOutOfRangeException e)

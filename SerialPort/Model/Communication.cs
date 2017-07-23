@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO.Ports;
 using System.Threading;
 
@@ -8,60 +7,58 @@ namespace MySerialPort.Model
 {
     public class Communication
     {
-        public static readonly string HEX_START = "0x";
+        public static readonly string HexStart = "0x";
 
-        private static int expectedTotalBytesReceived;
-        private static int totalBytesReceived;
-        private static bool isTranmissionEnded;
-        private static List<byte[]> receivedBytesList;
-        private static ISerialPortUpdate serialPortUpdate;
+        private static int _expectedTotalBytesReceived;
+        private static int _totalBytesReceived;
+        private static bool _isTranmissionEnded;
+        private static ISerialPortUpdate _serialPortUpdate;
 
-        public static readonly int HEX_BASE = 16;
-        private static SerialPort serialPort;
-        private static Crc32 crc32 = new Crc32();
+        public static readonly int HexBase = 16;
+        private static SerialPort _serialPort;
+        private static readonly Crc32 _crc32 = new Crc32();
 
-        public static readonly byte NEW_LINE = 10;
-        public static readonly int BAUD_RATE = 38400; //4.69KBit/s
-        private static readonly byte MAX_DATA_PACKET_LENGTH = 250;
+        public static readonly byte NewLine = 10;
+        public static readonly int BaudRate = 38400; //4.69KBit/s
+        private static readonly byte MaxDataPacketLength = 250;
 
-        public static readonly byte READ_COMMAND = 0xAA;
-        public static readonly byte WRITE_COMMAND = 0xDD;
+        public static readonly byte ReadCommand = 0xAA;
+        public static readonly byte WriteCommand = 0xDD;
 
-        public static readonly byte SD_CARD_MEMORY = 0x1A;
-        public static readonly byte EEPROM_MEMORY = 0x1B;
-        public static readonly byte CPU_MEMORY = 0x1C;
+        public static readonly byte SdCardMemory = 0x1A;
+        public static readonly byte EepromMemory = 0x1B;
+        public static readonly byte CpuMemory = 0x1C;
 
-        public static readonly byte INTENTION_LOG = 0x2A;
-        public static readonly byte INTENTION_COMMAND = 0x2B;
-        public static readonly byte INTENTION_CONFIG = 0x2C;
-        private static readonly byte HEADER_LENGTH = 9;
-        public static readonly byte CHECKSUM_LENGTH = 4;
-        private static readonly byte DATA_START_INDEX = 10;
-        private static readonly byte LOW_ADDR_START_INDEX = 4;
-        private static readonly byte HI_ADDR_START_INDEX = (byte)(LOW_ADDR_START_INDEX + 3);
+        public static readonly byte IntentionLog = 0x2A;
+        public static readonly byte IntentionCommand = 0x2B;
+        public static readonly byte IntentionConfig = 0x2C;
+        private static readonly byte HeaderLength = 9;
+        public static readonly byte ChecksumLength = 4;
+        private static readonly byte DataStartIndex = 10;
+        private static readonly byte LowAddrStartIndex = 4;
+        private static readonly byte HiAddrStartIndex = (byte)(LowAddrStartIndex + 3);
 
-        private static readonly int TIMEOUT_LIMIT_MS = 2 * 1000;
-        private static readonly int TIMEOUT_CHECK_INTERVAL_MS = 100;
+        private static readonly int TimeoutLimitMs = 2 * 1000;
+        private static readonly int TimeoutCheckIntervalMs = 100;
 
 
-        private static void reset()
+        private static void Reset()
         {
-            totalBytesReceived = 0;
-            isTranmissionEnded = false;
-            receivedBytesList = new List<byte[]>();
-            var t = new Thread(checkTimeout);
+            _totalBytesReceived = 0;
+            _isTranmissionEnded = false;
+            var t = new Thread(CheckTimeout);
             t.Start();
         }
 
-        private static void checkTimeout()
+        private static void CheckTimeout()
         {
-            int iTimeout = 1;
-            int t_ms = 0;
+            var iTimeout = 1;
+            var tMs = 0;
             while (true)
             {
-                if (t_ms > iTimeout * TIMEOUT_LIMIT_MS)
+                if (tMs > iTimeout * TimeoutLimitMs)
                 {
-                    bool continueAfterTimeout = serialPortUpdate.ContinueAfterTimeout(iTimeout * TIMEOUT_LIMIT_MS, iTimeout);
+                    var continueAfterTimeout = _serialPortUpdate.ContinueAfterTimeout(iTimeout * TimeoutLimitMs, iTimeout);
                     if (continueAfterTimeout)
                     {
                         iTimeout *= 2;
@@ -71,9 +68,9 @@ namespace MySerialPort.Model
                         break;
                     }
                 }
-                if (isTranmissionEnded)
+                if (_isTranmissionEnded)
                 {
-                    serialPortUpdate.transmissionEnd(String.Format("Transmission ended at t = {0} ms.", t_ms));
+                    _serialPortUpdate.TransmissionEnd($"Transmission ended at t = {tMs} ms.");
                     /*if (!ChecksumControl.isChecksumOk(receivedBytesList, Communication.getCrc32(), Communication.CHECKSUM_LENGTH))
                     {
                         MessageBox.Show(String.Format("Received crc32 byte {0} not as expected {1}!",
@@ -84,229 +81,220 @@ namespace MySerialPort.Model
                     }*/
                     break;
                 }
-                Thread.Sleep(TIMEOUT_CHECK_INTERVAL_MS);
-                t_ms += TIMEOUT_CHECK_INTERVAL_MS;
+                Thread.Sleep(TimeoutCheckIntervalMs);
+                tMs += TimeoutCheckIntervalMs;
             }
         }
 
-        public static void sendToSerialPort(byte[] buffer, int offset, int count, int dataLength)
+        public static void SendToSerialPort(byte[] buffer, int offset, int count, int dataLength)
         {
-            reset();
-            expectedTotalBytesReceived = 1 + dataLength + CHECKSUM_LENGTH;
-            serialPort.Write(buffer, offset, count);
+            Reset();
+            _expectedTotalBytesReceived = 1 + dataLength + ChecksumLength;
+            _serialPort.Write(buffer, offset, count);
         }
 
-        public static byte[] readFromSerialPort()
+        public static byte[] ReadFromSerialPort()
         {
-            var bytesReceivedFromCard = new byte[serialPort.BytesToRead];
-            serialPort.Read(bytesReceivedFromCard, 0, bytesReceivedFromCard.Length);
+            var bytesReceivedFromCard = new byte[_serialPort.BytesToRead];
+            _serialPort.Read(bytesReceivedFromCard, 0, bytesReceivedFromCard.Length);
             return bytesReceivedFromCard;
         }
 
-        public static Crc32 getCrc32()
+        public static Crc32 GetCrc32()
         {
-            return crc32;
+            return _crc32;
         }
 
-        public static bool isSerialPortOk()
+        public static bool IsSerialPortOk()
         {
-            return serialPort != null && serialPort.IsOpen;
+            return _serialPort != null && _serialPort.IsOpen;
         }
 
-        public static string getSerialPortStatus()
+        public static string GetSerialPortStatus()
         {
-            if (serialPort == null)
-            {
+            if (_serialPort == null)
                 return "serialPort == null";
-            }
-            else if (!serialPort.IsOpen)
-            {
-                return "!serialPort.IsOpen";
-            }
-            else
-            {
-                return "OK";
-            }
+            return !_serialPort.IsOpen ? "!serialPort.IsOpen" : "OK";
         }
 
-        private static byte getDataPacketLength(int dataLength)
+        private static byte GetDataPacketLength(int dataLength)
         {
-            int dataPacketLengthInt = HEADER_LENGTH + dataLength + CHECKSUM_LENGTH + 1;
-            if (dataPacketLengthInt > MAX_DATA_PACKET_LENGTH)
+            var dataPacketLengthInt = HeaderLength + dataLength + ChecksumLength + 1;
+            if (dataPacketLengthInt > MaxDataPacketLength)
             {
-                throw new Exception(String.Format("dataPacketLength {0} > MAX_DATA_PACKET_LENGTH {1}!", dataPacketLengthInt, MAX_DATA_PACKET_LENGTH));
+                throw new Exception(
+                    $"dataPacketLength {dataPacketLengthInt} > MAX_DATA_PACKET_LENGTH {MaxDataPacketLength}!");
             }
-            byte dataPacketLength = (byte)(dataPacketLengthInt);
+            var dataPacketLength = (byte)(dataPacketLengthInt);
             return dataPacketLength;
         }
 
-        public static byte[] prepareDataToWrite(int startAddr, byte[] data, int iMemory, byte intention)
+        public static byte[] PrepareDataToWrite(int startAddr, byte[] data, int iMemory, byte intention)
         {
             if (data.Length < 1)
             {
-                throw new ArgumentOutOfRangeException(String.Format("data.Length %d cannot be less than 1!", data.Length));
+                throw new ArgumentOutOfRangeException($"data.Length {data.Length} cannot be less than 1!");
             }
-            byte dataPacketLength = getDataPacketLength(data.Length);
+            var dataPacketLength = GetDataPacketLength(data.Length);
             var dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
-            dataSentBytes[1] = WRITE_COMMAND;
-            dataSentBytes[2] = getMemoryType(iMemory);
+            dataSentBytes[1] = WriteCommand;
+            dataSentBytes[2] = GetMemoryType(iMemory);
             dataSentBytes[3] = intention;
 
-            byte[] lowAddr = BitConverter.GetBytes(startAddr);
-            dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
-            dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
-            dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
+            var lowAddr = BitConverter.GetBytes(startAddr);
+            dataSentBytes[LowAddrStartIndex] = lowAddr[0];
+            dataSentBytes[LowAddrStartIndex + 1] = lowAddr[1];
+            dataSentBytes[LowAddrStartIndex + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length - 1;
-            byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
-            dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
-            dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
-            dataSentBytes[HI_ADDR_START_INDEX + 2] = hiAddrBytes[2];
+            var hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + data.Length - 1;
+            var hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
+            dataSentBytes[HiAddrStartIndex] = hiAddrBytes[0];
+            dataSentBytes[HiAddrStartIndex + 1] = hiAddrBytes[1];
+            dataSentBytes[HiAddrStartIndex + 2] = hiAddrBytes[2];
 
-            for (int i = DATA_START_INDEX; i < DATA_START_INDEX + data.Length; i++)
+            for (int i = DataStartIndex; i < DataStartIndex + data.Length; i++)
             {
-                dataSentBytes[i] = data[i - DATA_START_INDEX];
+                dataSentBytes[i] = data[i - DataStartIndex];
             }
-            int iStartCRC = DATA_START_INDEX + data.Length;
-            byte[] checksumCRC32 = crc32.ComputeHash(dataSentBytes, 0, iStartCRC);
-            for (int i = iStartCRC; i < iStartCRC + CHECKSUM_LENGTH; i++)
+            var iStartCrc = DataStartIndex + data.Length;
+            var checksumCrc32 = _crc32.ComputeHash(dataSentBytes, 0, iStartCrc);
+            for (var i = iStartCrc; i < iStartCrc + ChecksumLength; i++)
             {
-                dataSentBytes[i] = checksumCRC32[i - iStartCRC];
+                dataSentBytes[i] = checksumCrc32[i - iStartCrc];
             }
             return dataSentBytes;
         }
 
-        public static void openSerialPort(SerialPort serialPort, ISerialPortUpdate serialPortUpdate)
+        public static void OpenSerialPort(SerialPort serialPort, ISerialPortUpdate serialPortUpdate)
         {
-            Communication.serialPort = serialPort;
+            _serialPort = serialPort;
             serialPort.Open();
             // Attach a method to be called when there is data waiting in the port's buffer
-            Communication.serialPortUpdate = serialPortUpdate;
-            serialPort.DataReceived += dataReceived;
+            _serialPortUpdate = serialPortUpdate;
+            serialPort.DataReceived += DataReceived;
         }
 
         //Event handler is triggered/run on a NON-UI thread
-        private static void dataReceived(object sender, SerialDataReceivedEventArgs e)
+        private static void DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            if (!isTranmissionEnded) //TODO do we need this if? If yes, then we need a mechanism to verify that data sending has stopped so that we can start the next command
+            if (!_isTranmissionEnded) //TODO do we need this if? If yes, then we need a mechanism to verify that data sending has stopped so that we can start the next command
             {
-                byte[] bytesReceivedFromCard = Communication.readFromSerialPort();
-                receivedBytesList.Add(bytesReceivedFromCard);
-                totalBytesReceived += bytesReceivedFromCard.Length;
-                if (totalBytesReceived == expectedTotalBytesReceived)
+                var bytesReceivedFromCard = ReadFromSerialPort();
+                _totalBytesReceived += bytesReceivedFromCard.Length;
+                if (_totalBytesReceived == _expectedTotalBytesReceived)
                 {
-                    isTranmissionEnded = true;
+                    _isTranmissionEnded = true;
                 }
-                if (totalBytesReceived > expectedTotalBytesReceived)
+                if (_totalBytesReceived > _expectedTotalBytesReceived)
                 {
-                    string msg = String.Format("totalBytesReceived ({0}) > expectedReceivedDataLength ({1})",
-                        totalBytesReceived, expectedTotalBytesReceived);
-                    isTranmissionEnded = true;
-                    serialPortUpdate.transmissionEnd(msg);
+                    var msg =
+                        $"totalBytesReceived ({_totalBytesReceived}) > expectedReceivedDataLength ({_expectedTotalBytesReceived})";
+                    _isTranmissionEnded = true;
+                    _serialPortUpdate.TransmissionEnd(msg);
                     //throw new ArgumentOutOfRangeException(msg);                
                 }
                 //Update UI:
-                serialPortUpdate.update(bytesReceivedFromCard);
+                _serialPortUpdate.Update(bytesReceivedFromCard);
             }
         }
 
-        internal static void closeSerialPort()
+        internal static void CloseSerialPort()
         {
-            serialPort.Close();
+            _serialPort.Close();
         }
-        public static String getTimeStampedStr(String str)
+        public static string GetTimeStampedStr(string str)
         {
             return "[" + DateTime.Now.ToLongTimeString() + "] " + str + "\n";
             //return str;
         }
 
 
-        public static byte[] prepareDataToRead(int startAddr, int dataLength, int iMemory, byte intention)
+        public static byte[] PrepareDataToRead(int startAddr, int dataLength, int iMemory, byte intention)
         {
             if (dataLength < 1)
             {
-                throw new ArgumentOutOfRangeException(String.Format("dataLength %d cannot be less than 1!", dataLength));
+                throw new ArgumentOutOfRangeException($"dataLength {dataLength} cannot be less than 1!");
             }
-            byte dataPacketLength = getDataPacketLength(0);
-            byte[] dataSentBytes = new byte[dataPacketLength];
+            var dataPacketLength = GetDataPacketLength(0);
+            var dataSentBytes = new byte[dataPacketLength];
             dataSentBytes[0] = dataPacketLength;
-            dataSentBytes[1] = READ_COMMAND;
-            dataSentBytes[2] = getMemoryType(iMemory);
+            dataSentBytes[1] = ReadCommand;
+            dataSentBytes[2] = GetMemoryType(iMemory);
             dataSentBytes[3] = intention;
 
-            byte[] lowAddr = BitConverter.GetBytes(startAddr);
-            dataSentBytes[LOW_ADDR_START_INDEX] = lowAddr[0];
-            dataSentBytes[LOW_ADDR_START_INDEX + 1] = lowAddr[1];
-            dataSentBytes[LOW_ADDR_START_INDEX + 2] = lowAddr[2];
+            var lowAddr = BitConverter.GetBytes(startAddr);
+            dataSentBytes[LowAddrStartIndex] = lowAddr[0];
+            dataSentBytes[LowAddrStartIndex + 1] = lowAddr[1];
+            dataSentBytes[LowAddrStartIndex + 2] = lowAddr[2];
 
-            int hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
-            byte[] hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
-            dataSentBytes[HI_ADDR_START_INDEX] = hiAddrBytes[0];
-            dataSentBytes[HI_ADDR_START_INDEX + 1] = hiAddrBytes[1];
-            dataSentBytes[HI_ADDR_START_INDEX + 2] = hiAddrBytes[2];
+            var hiAddrInt = BitConverter.ToInt32(lowAddr, 0) + dataLength - 1;
+            var hiAddrBytes = BitConverter.GetBytes(hiAddrInt);
+            dataSentBytes[HiAddrStartIndex] = hiAddrBytes[0];
+            dataSentBytes[HiAddrStartIndex + 1] = hiAddrBytes[1];
+            dataSentBytes[HiAddrStartIndex + 2] = hiAddrBytes[2];
 
-            int iStartCRC = DATA_START_INDEX; //no data is sent to card when reading from card
-            byte[] checksumCRC32 = crc32.ComputeHash(dataSentBytes, 0, DATA_START_INDEX);
-            for (int i = iStartCRC; i < iStartCRC + CHECKSUM_LENGTH; i++)
+            int iStartCrc = DataStartIndex; //no data is sent to card when reading from card
+            var checksumCrc32 = _crc32.ComputeHash(dataSentBytes, 0, DataStartIndex);
+            for (var i = iStartCrc; i < iStartCrc + ChecksumLength; i++)
             {
-                dataSentBytes[i] = checksumCRC32[i - iStartCRC];
+                dataSentBytes[i] = checksumCrc32[i - iStartCrc];
             }
             return dataSentBytes;
         }
 
 
-        private static byte getMemoryType(int iMemory)
+        private static byte GetMemoryType(int iMemory)
         {
             switch (iMemory)
             {
                 case 0:
-                    return SD_CARD_MEMORY;
+                    return SdCardMemory;
                 case 1:
-                    return EEPROM_MEMORY;
+                    return EepromMemory;
                 case 2:
-                    return CPU_MEMORY;
+                    return CpuMemory;
                 default:
-                    throw new Exception(String.Format("Uknown selection " + iMemory));
+                    throw new Exception(string.Format("Uknown selection " + iMemory));
             }
         }
 
-        public static byte[] parseData(String text)
+        public static byte[] ParseData(string text)
         {
             var strings = text.Split(',');
             var bytes = new byte[strings.Length];
-            for (int i = 0; i < strings.Length; i++)
+            for (var i = 0; i < strings.Length; i++)
             {
                 var s = strings[i];
-                if (!String.IsNullOrEmpty(s.Trim()))
+                if (!string.IsNullOrEmpty(s.Trim()))
                 {
-                    bytes[i] = System.Convert.ToByte(s.Trim().Substring(2, 2), HEX_BASE); //Remove "0x" part
+                    bytes[i] = Convert.ToByte(s.Trim().Substring(2, 2), HexBase); //Remove "0x" part
                 }
                 else
                 {
-                    throw new Exception(String.Format("String is null or empty: {0}", s));
+                    throw new Exception($"String is null or empty: {s}");
                 }
             }
             return bytes;
         }
 
-        public static string toHexString(byte[] bytes)
+        public static string ToHexString(byte[] bytes)
         {
             var s = "";
             foreach (var b in bytes)
             {
-                s += String.Format(HEX_START + "{0}, ", System.Convert.ToString(b, Communication.HEX_BASE).ToUpper());
+                s += string.Format(HexStart + "{0}, ", Convert.ToString(b, HexBase).ToUpper());
             }
             //remove last comma
             s = s.Substring(0, s.Length - 2);
             return s;
         }
 
-        public static byte[] generateRandomData(int dataLength)
+        public static byte[] GenerateRandomData(int dataLength)
         {
-            Random rnd = new Random();
-            byte[] dataTemp = new byte[dataLength];
-            for (int i = 0; i < dataLength; i++)
+            var rnd = new Random();
+            var dataTemp = new byte[dataLength];
+            for (var i = 0; i < dataLength; i++)
             {
                 dataTemp[i] = (byte)rnd.Next(1, 0xFF);  // 1 <= dataTemp[i] < 255;
             }
@@ -317,33 +305,33 @@ namespace MySerialPort.Model
         //https://stackoverflow.com/a/228060/51358
         public static string Reverse(string s)
         {
-            char[] charArray = s.ToCharArray();
+            var charArray = s.ToCharArray();
             Array.Reverse(charArray);
             return new string(charArray);
         }
 
-        public static string convertHexToStr(string dataStr)
+        public static string ConvertHexToStr(string dataStr)
         {
-            string convertedStr = "";
-            string timeStampsRemovedStr = removeTimeStamps(dataStr);
+            var convertedStr = "";
+            var timeStampsRemovedStr = RemoveTimeStamps(dataStr);
             try
             {
-                byte[] dataBytes = parseData(timeStampsRemovedStr);
-                BitArray bits = new BitArray(dataBytes);
-                int iByte = 0;
-                string bitStr = "";
-                for (int counter = 0; counter < bits.Length; counter++)
+                var dataBytes = ParseData(timeStampsRemovedStr);
+                var bits = new BitArray(dataBytes);
+                var iByte = 0;
+                var bitStr = "";
+                for (var counter = 0; counter < bits.Length; counter++)
                 {
                     if (counter % 8 == 0)
                     {
-                        if (dataBytes[iByte] == NEW_LINE)
+                        if (dataBytes[iByte] == NewLine)
                         {
                             convertedStr = convertedStr + "\\n" + ": " + dataBytes[iByte].ToString() + ": ";
                             iByte++;
                         }
                         else
                         {
-                            convertedStr = convertedStr + System.Convert.ToString(dataBytes[iByte], HEX_BASE).ToUpper() + ": ";
+                            convertedStr = convertedStr + Convert.ToString(dataBytes[iByte], HexBase).ToUpper() + ": ";
                             iByte++;
                         }
                     }
@@ -358,18 +346,19 @@ namespace MySerialPort.Model
             }
             catch (Exception)
             {
-                convertedStr = convertedStr + String.Format("\"{0}\" string is not in hex format, cannot convert!\n", timeStampsRemovedStr);
+                convertedStr = convertedStr +
+                               $"\"{timeStampsRemovedStr}\" string is not in hex format, cannot convert!\n";
             }
             return convertedStr;
         }
 
-        public static string removeTimeStamps(string dataStr)
+        public static string RemoveTimeStamps(string dataStr)
         {
-            string strWithoutTimeStamps = dataStr;
+            var strWithoutTimeStamps = dataStr;
             while (true)
             {
-                int iStart = strWithoutTimeStamps.IndexOf("[");
-                int iEnd = strWithoutTimeStamps.IndexOf("]");
+                var iStart = strWithoutTimeStamps.IndexOf("[");
+                var iEnd = strWithoutTimeStamps.IndexOf("]");
                 if (iStart > -1 && iEnd > -1)
                 {
                     strWithoutTimeStamps = strWithoutTimeStamps.Remove(iStart, iEnd - iStart + 1);

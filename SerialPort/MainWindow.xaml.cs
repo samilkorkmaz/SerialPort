@@ -15,38 +15,35 @@ namespace MySerialPort
         public MainWindow()
         {
             InitializeComponent();
-            foreach (string s in SerialPort.GetPortNames())
+            foreach (var s in SerialPort.GetPortNames())
             {
                 AvailableSerialPorts.Items.Add(s);
             }
             AvailableSerialPorts.SelectedIndex = AvailableSerialPorts.Items.Count - 1;
-            byte[] dataTemp = Communication.generateRandomData(5);
-            DataToSend.Text = Communication.toHexString(dataTemp);
+            var dataTemp = Communication.GenerateRandomData(5);
+            DataToSend.Text = Communication.ToHexString(dataTemp);
         }
 
         public delegate void UpdateUiTextDelegate(string text);
 
-        private void WriteDataToUI(string text)
+        private void WriteDataToUi(string text)
         {
-            DataReceived.Text += Communication.getTimeStampedStr(removeDashes(text));
+            DataReceived.Text += Communication.GetTimeStampedStr(RemoveDashes(text));
         }
 
         private class SerialPortUpdate : ISerialPortUpdate
         {
-            MainWindow mainWindow;
+            readonly MainWindow _mainWindow;
 
-            public SerialPortUpdate(MainWindow window)
-            {
-                this.mainWindow = window;
-            }
+            public SerialPortUpdate(MainWindow window) => _mainWindow = window;
 
-            public void update(byte[] dataReceived)
+            public void Update(byte[] dataReceived)
             {
-                mainWindow.Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(mainWindow.WriteDataToUI),
+                _mainWindow.Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(_mainWindow.WriteDataToUi),
                     BitConverter.ToString(dataReceived));
             }
 
-            public void transmissionEnd(string message)
+            public void TransmissionEnd(string message)
             {
                 MessageBox.Show(message);
             }
@@ -54,13 +51,14 @@ namespace MySerialPort
             public bool ContinueAfterTimeout(int t_ms, int iTimeout)
             {
                 bool continueAfterTimeout;
-                MessageBoxResult result = MessageBox.Show(String.Format("Timeout limit of {0} ms reached before transmission could end."
-                        + "\niTimeout = {1}\nDo you want to keep on waiting?", t_ms, iTimeout)
-                        , "Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var result = MessageBox.Show(
+                    $"Timeout limit of {t_ms} ms reached before transmission could end." +
+                    $"\niTimeout = {iTimeout}\nDo you want to keep on waiting?"
+                    , "Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.No)
                 {
-                    mainWindow.DataReceived.Dispatcher.Invoke(new UpdateReceivedDataTextCallback(mainWindow.UpdateReceivedDataText),
-                        new object[] { String.Format("ERROR: Timout at {0} ms!", t_ms) });
+                    _mainWindow.DataReceived.Dispatcher.Invoke(new UpdateReceivedDataTextCallback(_mainWindow.UpdateReceivedDataText),
+                        new object[] {$"ERROR: Timout at {t_ms} ms!"});
                     continueAfterTimeout = false;
                 }
                 else
@@ -71,15 +69,15 @@ namespace MySerialPort
             }
         }
 
-        private void connectClick(object sender, RoutedEventArgs e)
+        private void ConnectClick(object sender, RoutedEventArgs e)
         {
-            String portName = AvailableSerialPorts.SelectedItem.ToString();
+            var portName = AvailableSerialPorts.SelectedItem.ToString();
             try
             {
-                Communication.openSerialPort(new SerialPort(portName, Communication.BAUD_RATE, Parity.None, 8, StopBits.One),
+                Communication.OpenSerialPort(new SerialPort(portName, Communication.BaudRate, Parity.None, 8, StopBits.One),
                                 new SerialPortUpdate(this));
                 ConnectedTo.Text = "Connected to " + portName;
-                connectionEnabled(true);
+                ConnectionEnabled(true);
             }
             catch (Exception ex)
             {
@@ -87,7 +85,7 @@ namespace MySerialPort
             }
         }
 
-        private void connectionEnabled(bool isEnabled)
+        private void ConnectionEnabled(bool isEnabled)
         {
             Connect.IsEnabled = !isEnabled;
             SendWrite.IsEnabled = isEnabled;
@@ -97,57 +95,57 @@ namespace MySerialPort
             DataSent.Text = "";
         }
 
-        private void sendWriteClick(object sender, RoutedEventArgs e)
+        private void SendWriteClick(object sender, RoutedEventArgs e)
         {
-            byte[] data = Communication.parseData(DataToSend.Text);
-            byte[] allBytes = Communication.prepareDataToWrite(System.Convert.ToInt32(StartAddr.Text),
-                data, MemoryType.SelectedIndex, Communication.INTENTION_COMMAND);
-            communicateWithSerialPort(allBytes, data.Length);
+            var data = Communication.ParseData(DataToSend.Text);
+            var allBytes = Communication.PrepareDataToWrite(System.Convert.ToInt32(StartAddr.Text),
+                data, MemoryType.SelectedIndex, Communication.IntentionCommand);
+            CommunicateWithSerialPort(allBytes, data.Length);
 
         }
 
-        private void communicateWithSerialPort(byte[] allBytes, int dataLength)
+        private void CommunicateWithSerialPort(byte[] allBytes, int dataLength)
         {
-            if (Communication.isSerialPortOk())
+            if (Communication.IsSerialPortOk())
             {
-                Communication.sendToSerialPort(allBytes, 0, allBytes.Length, dataLength);
-                DataSent.Text = removeDashes(BitConverter.ToString(allBytes));
+                Communication.SendToSerialPort(allBytes, 0, allBytes.Length, dataLength);
+                DataSent.Text = RemoveDashes(BitConverter.ToString(allBytes));
             }
             else
             {
-                MessageBox.Show(Communication.getSerialPortStatus());
+                MessageBox.Show(Communication.GetSerialPortStatus());
             }
         }
 
-        private string removeDashes(string text)
+        private string RemoveDashes(string text)
         {
-            return Communication.HEX_START + text.Replace("-", ", " + Communication.HEX_START);
+            return Communication.HexStart + text.Replace("-", ", " + Communication.HexStart);
         }
 
-        private void sendReadClick(object sender, RoutedEventArgs e)
+        private void SendReadClick(object sender, RoutedEventArgs e)
         {
-            byte[] allBytes = Communication.prepareDataToRead(System.Convert.ToInt32(StartAddr.Text),
-                System.Convert.ToInt32(DataLength.Text), MemoryType.SelectedIndex, Communication.INTENTION_COMMAND);
-            communicateWithSerialPort(allBytes, 0);
+            var allBytes = Communication.PrepareDataToRead(System.Convert.ToInt32(StartAddr.Text),
+                System.Convert.ToInt32(DataLength.Text), MemoryType.SelectedIndex, Communication.IntentionCommand);
+            CommunicateWithSerialPort(allBytes, 0);
         }
 
         public delegate void UpdateReceivedDataTextCallback(string message);
 
-        private void UpdateReceivedDataText(string message)
+        public void UpdateReceivedDataText(string message)
         {
             DataReceived.Text = message;
         }
 
-        private void closeSerialPortClick(object sender, RoutedEventArgs e)
+        private void CloseSerialPortClick(object sender, RoutedEventArgs e)
         {
-            Communication.closeSerialPort();
-            connectionEnabled(false);
+            Communication.CloseSerialPort();
+            ConnectionEnabled(false);
             ConnectedTo.Text = "Connection closed";
         }
 
         private void Convert_Click(object sender, RoutedEventArgs e)
         {
-            ConvertedData.Text = Communication.convertHexToStr(DataReceived.Text);
+            ConvertedData.Text = Communication.ConvertHexToStr(DataReceived.Text);
         }
 
     }

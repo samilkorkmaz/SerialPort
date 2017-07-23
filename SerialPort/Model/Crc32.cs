@@ -10,68 +10,68 @@ namespace MySerialPort.Model
     /// </summary>
     public sealed class Crc32 : HashAlgorithm
     {
-        public const UInt32 DefaultPolynomial = 0xedb88320u;
-        public const UInt32 DefaultSeed = 0xffffffffu;
+        public const uint DefaultPolynomial = 0xedb88320u;
+        public const uint DefaultSeed = 0xffffffffu;
 
-        static UInt32[] defaultTable;
+        static uint[] _defaultTable;
 
-        readonly UInt32 seed;
-        readonly UInt32[] table;
-        UInt32 hash;
+        readonly uint _seed;
+        readonly uint[] _table;
+        uint _hash;
        
         public Crc32() : this(DefaultPolynomial, DefaultSeed)
         {
         }
 
-        public Crc32(UInt32 polynomial, UInt32 seed)
+        public Crc32(uint polynomial, uint seed)
         {
-            table = InitializeTable(polynomial);
-            this.seed = hash = seed;
+            _table = InitializeTable(polynomial);
+            _seed = _hash = seed;
         }
 
         public override void Initialize()
         {
-            hash = seed;
+            _hash = _seed;
         }
 
         protected override void HashCore(byte[] array, int ibStart, int cbSize)
         {
-            hash = CalculateHash(table, hash, array, ibStart, cbSize);
+            _hash = CalculateHash(_table, _hash, array, ibStart, cbSize);
         }
 
         protected override byte[] HashFinal()
         {
-            var hashBuffer = UInt32ToBigEndianBytes(~hash);
+            var hashBuffer = UInt32ToBigEndianBytes(~_hash);
             HashValue = hashBuffer;
             return hashBuffer;
         }
 
         public override int HashSize { get { return 32; } }
 
-        public static UInt32 Compute(byte[] buffer)
+        public static uint Compute(byte[] buffer)
         {
             return Compute(DefaultSeed, buffer);
         }
 
-        public static UInt32 Compute(UInt32 seed, byte[] buffer)
+        public static uint Compute(uint seed, byte[] buffer)
         {
             return Compute(DefaultPolynomial, seed, buffer);
         }
 
-        public static UInt32 Compute(UInt32 polynomial, UInt32 seed, byte[] buffer)
+        public static uint Compute(uint polynomial, uint seed, byte[] buffer)
         {
             return ~CalculateHash(InitializeTable(polynomial), seed, buffer, 0, buffer.Length);
         }
 
-        static UInt32[] InitializeTable(UInt32 polynomial)
+        static uint[] InitializeTable(uint polynomial)
         {
-            if (polynomial == DefaultPolynomial && defaultTable != null)
-                return defaultTable;
+            if (polynomial == DefaultPolynomial && _defaultTable != null)
+                return _defaultTable;
 
-            var createTable = new UInt32[256];
+            var createTable = new uint[256];
             for (var i = 0; i < 256; i++)
             {
-                var entry = (UInt32)i;
+                var entry = (uint)i;
                 for (var j = 0; j < 8; j++)
                     if ((entry & 1) == 1)
                         entry = (entry >> 1) ^ polynomial;
@@ -81,12 +81,12 @@ namespace MySerialPort.Model
             }
 
             if (polynomial == DefaultPolynomial)
-                defaultTable = createTable;
+                _defaultTable = createTable;
 
             return createTable;
         }
 
-        static UInt32 CalculateHash(UInt32[] table, UInt32 seed, IList<byte> buffer, int start, int size)
+        static uint CalculateHash(uint[] table, uint seed, IList<byte> buffer, int start, int size)
         {
             var hash = seed;
             for (var i = start; i < start + size; i++)
@@ -94,7 +94,7 @@ namespace MySerialPort.Model
             return hash;
         }
 
-        static byte[] UInt32ToBigEndianBytes(UInt32 uint32)
+        static byte[] UInt32ToBigEndianBytes(uint uint32)
         {
             var result = BitConverter.GetBytes(uint32);
 

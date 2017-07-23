@@ -1,29 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MySerialPort.Model
 {
     public class ChecksumControl
     {
-        private static byte[] expected;
-        private static byte[] received;
-
-        public static byte[] Expected { get => expected; }
-        public static byte[] Received { get => received; }
+        public static byte[] Expected { get; private set; }
+        public static byte[] Received { get; private set; }
 
         /// <summary>
         /// Convert byte array to hex string.
         /// </summary>
         /// <param name="array"></param>
         /// <returns></returns>
-        public static String getByteArrayAsString(byte[] array)
+        public static string GetByteArrayAsString(byte[] array)
         {
-            String str = "";
-            for (int i = 0; i < array.Length; i++)
-            {
-                str += System.Convert.ToString(array[i], Communication.HEX_BASE);
-            }
-            return str;
+            return array.Aggregate("", (current, t) => current + System.Convert.ToString(t, Communication.HexBase));
         }
 
         /// <summary>
@@ -33,19 +26,16 @@ namespace MySerialPort.Model
         /// <param name="crc32"></param>
         /// <param name="checksumLength"></param>
         /// <returns></returns>
-        public static bool isChecksumOk(List<byte[]> receivedBytesList, Crc32 crc32, int checksumLength)
+        public static bool IsChecksumOk(List<byte[]> receivedBytesList, Crc32 crc32, int checksumLength)
         {
-            int arraySize = 0;
-            foreach (var bytes in receivedBytesList)
-            {
-                arraySize += bytes.Length;
-            }
+            var arraySize = receivedBytesList.Sum(bytes => bytes.Length);
             if (arraySize <= checksumLength)
             {
-                throw new ArgumentOutOfRangeException(String.Format("Byte array size {0} must be larger than checksumLength {1}", arraySize, checksumLength));
+                throw new ArgumentOutOfRangeException(
+                    $"Byte array size {arraySize} must be larger than checksumLength {checksumLength}");
             }
             var allReceivedBytes = new byte[arraySize];
-            int iStart = 0;
+            var iStart = 0;
             foreach (var bytes in receivedBytesList)
             {
                 Array.Copy(bytes, 0, allReceivedBytes, iStart, bytes.Length);
@@ -53,12 +43,12 @@ namespace MySerialPort.Model
             }
             var receivedBytesWithoutChecksum = new byte[arraySize - checksumLength];
             Array.Copy(allReceivedBytes, receivedBytesWithoutChecksum, arraySize - checksumLength);
-            byte[] expectedCrc32 = crc32.ComputeHash(receivedBytesWithoutChecksum);
+            var expectedCrc32 = crc32.ComputeHash(receivedBytesWithoutChecksum);
             var receivedCrc32 = new byte[checksumLength];
             Array.Copy(allReceivedBytes, allReceivedBytes.Length - checksumLength, receivedCrc32, 0, checksumLength);
-            expected = expectedCrc32;
-            received = receivedCrc32;
-            for (int i = 0; i < checksumLength; i++)
+            Expected = expectedCrc32;
+            Received = receivedCrc32;
+            for (var i = 0; i < checksumLength; i++)
             {
                 if (expectedCrc32[i] != receivedCrc32[i])
                 {

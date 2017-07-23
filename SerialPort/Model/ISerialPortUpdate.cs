@@ -2,8 +2,8 @@
 {
     public interface ISerialPortUpdate
     {
-        void update(byte[] dataReceived);
-        void transmissionEnd(string message);
+        void Update(byte[] dataReceived);
+        void TransmissionEnd(string message);
         bool ContinueAfterTimeout(int t_ms, int iTimeout);
     }
 }
