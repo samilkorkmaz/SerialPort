@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Windows;
 using System.IO.Ports;
+using System.Windows;
 using System.Windows.Threading;
 using MySerialPort.Model;
 
-namespace MySerialPort
+namespace MySerialPort.View
 {
     /// <summary>
     /// Communication with rail circuit card via serial port.
