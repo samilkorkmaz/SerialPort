@@ -56,7 +56,7 @@ namespace MySerialPort.View
             {
                 _mainWindow.Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(_mainWindow.WriteDataToUi),
                     NEW_LINE);
-                MessageBox.Show(message);
+                //MessageBox.Show(message);
             }
 
             public bool ContinueAfterTimeout(int t_ms, int iTimeout)
