@@ -100,7 +100,7 @@ namespace MySerialPort.View
             var data = Communication.ParseData(DataToSend.Text);
             var allBytes = Communication.PrepareDataToWrite(System.Convert.ToInt32(StartAddr.Text),
                 data, MemoryType.SelectedIndex, Communication.IntentionCommand);
-            CommunicateWithSerialPort(allBytes, data.Length);
+            CommunicateWithSerialPort(allBytes, 0);
 
         }
 
@@ -124,9 +124,10 @@ namespace MySerialPort.View
 
         private void SendReadClick(object sender, RoutedEventArgs e)
         {
+            var dataLength = System.Convert.ToInt32(DataLength.Text);
             var allBytes = Communication.PrepareDataToRead(System.Convert.ToInt32(StartAddr.Text),
-                System.Convert.ToInt32(DataLength.Text), MemoryType.SelectedIndex, Communication.IntentionCommand);
-            CommunicateWithSerialPort(allBytes, 0);
+                dataLength, MemoryType.SelectedIndex, Communication.IntentionCommand);
+            CommunicateWithSerialPort(allBytes, dataLength);
         }
 
         public delegate void UpdateReceivedDataTextCallback(string message);

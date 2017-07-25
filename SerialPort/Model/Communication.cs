@@ -298,8 +298,8 @@ namespace MySerialPort.Model
             {
                 dataTemp[i] = (byte)rnd.Next(1, 0xFF);  // 1 <= dataTemp[i] < 255;
             }
-            return dataTemp;
-            //return new byte[] { 0x35, 0x44, 0x15, 0xC1, 0xD0 };
+            //return dataTemp;
+            return new byte[] { 0x35, 0x44, 0x15, 0xC1, 0xD0 };
         }
 
         //https://stackoverflow.com/a/228060/51358
