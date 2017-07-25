@@ -205,7 +205,8 @@ namespace MySerialPort.Model
         }
         public static string GetTimeStampedStr(string str)
         {
-            return "[" + DateTime.Now.ToLongTimeString() + "] " + str + "\n";
+            return "[" + DateTime.Now.ToString("HH:mm:ss.fff") + "] " + str + "\n";
+            //return "[" + DateTime.Now.ToLongTimeString() + "] " + str + "\n";
             //return str;
         }
 
@@ -261,7 +262,7 @@ namespace MySerialPort.Model
 
         public static byte[] ParseData(string text)
         {
-            var strings = text.Split(',');
+            var strings = text.Replace("\n\n", ",").Replace("\n", ",").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             var bytes = new byte[strings.Length];
             for (var i = 0; i < strings.Length; i++)
             {
@@ -269,10 +270,6 @@ namespace MySerialPort.Model
                 if (!string.IsNullOrEmpty(s.Trim()))
                 {
                     bytes[i] = Convert.ToByte(s.Trim().Substring(2, 2), HexBase); //Remove "0x" part
-                }
-                else
-                {
-                    throw new Exception($"String is null or empty: {s}");
                 }
             }
             return bytes;

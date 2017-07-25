@@ -12,6 +12,8 @@ namespace MySerialPort.View
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const string NEW_LINE = "\n";
+
         public MainWindow()
         {
             InitializeComponent();
@@ -28,7 +30,14 @@ namespace MySerialPort.View
 
         private void WriteDataToUi(string text)
         {
-            DataReceived.Text += Communication.GetTimeStampedStr(RemoveDashes(text));
+            if (string.Equals(text, NEW_LINE))
+            {
+                DataReceived.Text += text;
+            }
+            else
+            {
+                DataReceived.Text += Communication.GetTimeStampedStr(RemoveDashes(text));
+            }
         }
 
         private class SerialPortUpdate : ISerialPortUpdate
@@ -45,6 +54,8 @@ namespace MySerialPort.View
 
             public void TransmissionEnd(string message)
             {
+                _mainWindow.Dispatcher.Invoke(DispatcherPriority.Send, new UpdateUiTextDelegate(_mainWindow.WriteDataToUi),
+                    NEW_LINE);
                 MessageBox.Show(message);
             }
 
